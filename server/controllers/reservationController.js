@@ -1,5 +1,14 @@
 import Reservation from '../models/Reservation.js';
 
+export const getReservations = async (req, res) => {
+  try {
+    const reservations = await Reservation.find().populate('restaurant user');
+    res.json(reservations); // ✅ Always return an array
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch reservations' });
+  }
+};
+
 export const createReservation = async (req, res) => {
   const { restaurant, date, timeSlot } = req.body;
 
