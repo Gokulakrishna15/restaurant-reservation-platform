@@ -13,8 +13,15 @@ import paymentRoutes from './routes/payments.js'; // ✅ Stripe route
 dotenv.config();
 
 const app = express();
+
+// ✅ Middleware
 app.use(cors());
 app.use(express.json());
+
+// ✅ Health check route for Render
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'Restaurant Reservation API is live 🚀' });
+});
 
 // ✅ Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {
@@ -27,12 +34,12 @@ mongoose.connect(process.env.MONGO_URI, {
 // ✅ Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/reservations', reservationRoutes);
-app.use('/api/reviews', reviewRoutes); // ✅ Corrected casing
+app.use('/api/reviews', reviewRoutes);
 app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/upload', uploadRoutes);
-app.use('/api/payments', paymentRoutes); // ✅ Stripe route
+app.use('/api/payments', paymentRoutes);
 
-// ✅ Listen on all interfaces for Render
+// ✅ Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
