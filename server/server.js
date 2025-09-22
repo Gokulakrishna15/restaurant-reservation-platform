@@ -10,6 +10,8 @@ import restaurantRoutes from './routes/restaurants.js';
 import uploadRoutes from './routes/upload.js';
 import paymentRoutes from './routes/payments.js'; // ✅ Stripe route
 
+import authMiddleware from './middleware/authMiddleware.js'; // ✅ JWT protection
+
 dotenv.config();
 
 const app = express();
@@ -32,12 +34,16 @@ mongoose.connect(process.env.MONGO_URI, {
 .catch((err) => console.error('❌ MongoDB connection error:', err.message));
 
 // ✅ Mount routes
-app.use('/api/auth', authRoutes);
-app.use('/api/reservations', reservationRoutes);
+app.use('/api/auth', authRoutes); // Public routes
+
+// 🔐 Protected routes (require JWT)
+app.use('/api/reservations', authMiddleware, reservationRoutes);
+app.use('/api/upload', authMiddleware, uploadRoutes);
+app.use('/api/payments', authMiddleware, paymentRoutes);
+
+// ✅ Public routes
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/restaurants', restaurantRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/payments', paymentRoutes);
 
 // ✅ Start server
 const PORT = process.env.PORT || 5000;
