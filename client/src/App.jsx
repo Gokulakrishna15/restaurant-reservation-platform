@@ -1,5 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 import RestaurantList from './components/RestaurantList';
 import ReservationForm from './components/ReservationForm';
@@ -11,19 +11,12 @@ import Signup from './components/Signup';
 import PrivateRoute from './components/PrivateRoute';
 
 function ProtectedApp() {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) navigate('/login');
-  }, [navigate]);
-
   return (
     <div className="min-h-screen bg-gray-100 p-6 space-y-10">
-      <h1 className="text-3xl font-bold text-center text-blue-700">Restaurant Reservation Platform</h1>
+      <h1 className="text-3xl font-bold text-center text-blue-700">
+        Restaurant Reservation Platform
+      </h1>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
         <Route
           path="/"
           element={
@@ -46,7 +39,11 @@ function ProtectedApp() {
 export default function App() {
   return (
     <Router>
-      <ProtectedApp />
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/*" element={<ProtectedApp />} />
+      </Routes>
     </Router>
   );
 }
