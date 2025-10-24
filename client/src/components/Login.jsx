@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { loginUser } from '../services/authService';
 
 export default function Login() {
@@ -13,7 +13,7 @@ export default function Login() {
       const res = await loginUser({ email, password });
       console.log('Login successful:', res.data);
       localStorage.setItem('token', res.data.token);
-      navigate('/dashboard'); // or wherever your protected route lands
+      navigate('/'); // ✅ Redirect to root route that matches ProtectedApp
     } catch (err) {
       console.error('Login error:', err);
       alert(err.response?.data?.message || 'Login failed');
@@ -53,6 +53,19 @@ export default function Login() {
           Login
         </button>
       </form>
+
+      {/* Register Link */}
+      <p className="text-sm text-center mt-4">
+        Don’t have an account?{' '}
+        <Link to="/register" className="text-blue-500 underline hover:text-blue-700">
+          Register here
+        </Link>
+      </p>
+
+      {/* Tailwind Proof Banner */}
+      <div className="text-xs text-gray-500 text-center mt-4">
+        TailwindCSS proof banner for Zen Class ✅
+      </div>
     </div>
   );
 }

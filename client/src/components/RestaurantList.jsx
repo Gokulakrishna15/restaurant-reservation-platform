@@ -1,3 +1,4 @@
+import React from 'react'; // ✅ Required for JSX
 import { useEffect, useState } from 'react';
 import { getRestaurants } from '../services/api';
 import RestaurantCard from './RestaurantCard';
