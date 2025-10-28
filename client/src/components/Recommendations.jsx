@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
+const BASE_URL = 'https://restaurant-reservation-platform-cefo.onrender.com/api';
+
 const Recommendations = ({ userToken }) => {
   const [restaurants, setRestaurants] = useState([]);
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/restaurants/recommendations', {
+    axios.get(`${BASE_URL}/restaurants/recommendations`, {
       headers: { Authorization: `Bearer ${userToken}` }
     })
       .then(res => setRestaurants(res.data))

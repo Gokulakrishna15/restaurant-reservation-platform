@@ -6,14 +6,14 @@ const ReviewSection = ({ restaurantName, userToken }) => {
   const [form, setForm] = useState({ comment: '', rating: 5 });
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/api/reviews/${restaurantName}`)
+    axios.get(`http://https://restaurant-reservation-platform-cefo.onrender.com/api/reviews/${restaurantName}`)
       .then(res => setReviews(res.data))
       .catch(err => console.error('Error fetching reviews:', err));
   }, [restaurantName]);
 
   const handleSubmit = async () => {
     try {
-      await axios.post('http://localhost:5000/api/reviews', {
+      await axios.post('http://https://restaurant-reservation-platform-cefo.onrender.com/api/reviews', {
         restaurant: restaurantName,
         comment: form.comment,
         rating: form.rating
@@ -21,7 +21,7 @@ const ReviewSection = ({ restaurantName, userToken }) => {
         headers: { Authorization: `Bearer ${userToken}` }
       });
       setForm({ comment: '', rating: 5 });
-      const res = await axios.get(`http://localhost:5000/api/reviews/${restaurantName}`);
+      const res = await axios.get(`http://https://restaurant-reservation-platform-cefo.onrender.com/api/reviews/${restaurantName}`);
       setReviews(res.data);
     } catch (err) {
       console.error('Error submitting review:', err);

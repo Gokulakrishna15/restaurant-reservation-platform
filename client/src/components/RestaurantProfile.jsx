@@ -2,13 +2,16 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 
+const BASE_URL = 'https://restaurant-reservation-platform-cefo.onrender.com/api';
+
 const RestaurantProfile = () => {
   const { id } = useParams();
   const [restaurant, setRestaurant] = useState(null);
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/api/restaurants/${id}`)
-      .then(res => setRestaurant(res.data));
+    axios.get(`${BASE_URL}/restaurants/${id}`)
+      .then(res => setRestaurant(res.data))
+      .catch(err => console.error('Error fetching restaurant:', err));
   }, [id]);
 
   if (!restaurant) return <p>Loading...</p>;

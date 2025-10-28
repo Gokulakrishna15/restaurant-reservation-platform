@@ -6,7 +6,7 @@ const SearchBar = ({ setResults }) => {
 
   const handleSearch = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/restaurants/search', {
+      const res = await axios.get('http://https://restaurant-reservation-platform-cefo.onrender.com/api/restaurants/search', {
         params: filters
       });
       setResults(res.data);

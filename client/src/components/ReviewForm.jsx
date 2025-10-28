@@ -15,7 +15,7 @@ const ReviewForm = ({ restaurantId }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/reviews', {
+      await axios.post('http://https://restaurant-reservation-platform-cefo.onrender.com/api/reviews', {
         ...formData,
         restaurantId,
       });

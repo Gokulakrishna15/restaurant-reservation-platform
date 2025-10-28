@@ -1,6 +1,7 @@
-import React from 'react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+
+const BASE_URL = 'https://restaurant-reservation-platform-cefo.onrender.com/api';
 
 const ReservationList = () => {
   const [reservations, setReservations] = useState([]);
@@ -9,9 +10,9 @@ const ReservationList = () => {
 
   const fetchReservations = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/reservations'); // ✅ Full URL
+      const res = await axios.get(`${BASE_URL}/reservations`);
       console.log('Fetched reservations:', res.data);
-      setReservations(Array.isArray(res.data) ? res.data : []); // ✅ Safety check
+      setReservations(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Fetch error:', err);
     }
@@ -31,14 +32,22 @@ const ReservationList = () => {
   };
 
   const handleUpdate = async () => {
-    await axios.put(`http://localhost:5000/api/reservations/${editingId}`, formData);
-    setEditingId(null);
-    fetchReservations();
+    try {
+      await axios.put(`${BASE_URL}/reservations/${editingId}`, formData);
+      setEditingId(null);
+      fetchReservations();
+    } catch (err) {
+      console.error('Update error:', err);
+    }
   };
 
   const handleDelete = async (id) => {
-    await axios.delete(`http://localhost:5000/api/reservations/${id}`);
-    fetchReservations();
+    try {
+      await axios.delete(`${BASE_URL}/reservations/${id}`);
+      fetchReservations();
+    } catch (err) {
+      console.error('Delete error:', err);
+    }
   };
 
   return (
