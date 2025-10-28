@@ -1,6 +1,6 @@
+// client/src/components/ReservationForm.jsx
 import React, { useState } from 'react';
-import axios from 'axios';
-import { createReservation } from '../services/api';
+import { createReservation, initiatePayment } from '../services/api';
 
 const ReservationForm = () => {
   const [formData, setFormData] = useState({
@@ -41,8 +41,8 @@ const ReservationForm = () => {
 
   const handlePayment = async () => {
     try {
-      const res = await axios.post('/api/payments/create-checkout-session');
-      window.location.href = res.data.url;
+      const url = await initiatePayment();
+      window.location.href = url;
     } catch (err) {
       console.error('Payment error:', err);
       alert('Payment failed. Try again.');
