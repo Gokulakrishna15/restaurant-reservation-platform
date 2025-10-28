@@ -15,11 +15,16 @@ import paymentRoutes from './routes/payments.js';
 
 const app = express();
 
-// ✅ CORS: Allow Netlify frontend + credentials
+// ✅ CORS: Allow Netlify + credentials + preflight
 app.use(cors({
   origin: 'https://eclectic-cucurucho-a9fcf2.netlify.app',
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// ✅ Handle preflight requests
+app.options('*', cors());
 
 app.use(express.json());
 
