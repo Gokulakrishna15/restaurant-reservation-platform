@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 
 dotenv.config();
 
+// 🔗 Route Imports
 import authRoutes from './routes/auth.js';
 import reservationRoutes from './routes/reservations.js';
 import reviewRoutes from './routes/Reviews.js';
@@ -14,9 +15,15 @@ import paymentRoutes from './routes/payments.js';
 
 const app = express();
 
-app.use(cors());
+// ✅ CORS: Allow Netlify frontend + credentials
+app.use(cors({
+  origin: 'https://eclectic-cucurucho-a9fcf2.netlify.app',
+  credentials: true
+}));
+
 app.use(express.json());
 
+// ✅ MongoDB Connection
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
@@ -24,10 +31,12 @@ mongoose.connect(process.env.MONGO_URI, {
 .then(() => console.log('✅ MongoDB connected'))
 .catch((err) => console.error('❌ MongoDB connection error:', err.message));
 
+// ✅ Health Check Route
 app.get('/', (req, res) => {
   res.send('✅ Restaurant backend is running');
 });
 
+// ✅ API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/reservations', reservationRoutes);
 app.use('/api/reviews', reviewRoutes);
@@ -35,11 +44,13 @@ app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/payments', paymentRoutes);
 
+// ✅ Error Handler
 app.use((err, req, res, next) => {
   console.error('❌ Server error:', err.message);
   res.status(500).json({ error: 'Internal Server Error' });
 });
 
+// ✅ Server Listener
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
