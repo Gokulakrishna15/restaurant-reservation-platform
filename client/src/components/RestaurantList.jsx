@@ -1,26 +1,79 @@
-import React from 'react'; // ✅ Required for JSX
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { getRestaurants } from '../services/api';
 import RestaurantCard from './RestaurantCard';
+import axios from '../services/api';
 
 const RestaurantList = () => {
   const [restaurants, setRestaurants] = useState([]);
+  const [search, setSearch] = useState({
+    cuisine: '',
+    location: '',
+    features: ''
+  });
+
+  const fetchRestaurants = async () => {
+    try {
+      const res = await getRestaurants();
+      setRestaurants(res.data);
+    } catch (error) {
+      console.error('Error fetching restaurants:', error);
+    }
+  };
+
+  const handleSearch = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (search.cuisine) params.append('cuisine', search.cuisine);
+      if (search.location) params.append('location', search.location);
+      if (search.features) params.append('features', search.features);
+
+      const res = await axios.get(`/restaurants/search?${params.toString()}`);
+      setRestaurants(res.data);
+    } catch (err) {
+      console.error('Search error:', err);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await getRestaurants();
-        setRestaurants(res.data);
-      } catch (error) {
-        console.error('Error fetching restaurants:', error);
-      }
-    };
-    fetchData();
+    fetchRestaurants();
   }, []);
 
   return (
     <div className="max-w-4xl mx-auto mt-8">
       <h2 className="text-xl font-bold mb-4">Restaurants</h2>
+
+      {/* 🔍 Search Bar */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <input
+          type="text"
+          placeholder="Cuisine (e.g. Italian)"
+          value={search.cuisine}
+          onChange={(e) => setSearch({ ...search, cuisine: e.target.value })}
+          className="p-2 border rounded"
+        />
+        <input
+          type="text"
+          placeholder="Location (e.g. Chennai)"
+          value={search.location}
+          onChange={(e) => setSearch({ ...search, location: e.target.value })}
+          className="p-2 border rounded"
+        />
+        <input
+          type="text"
+          placeholder="Features (e.g. outdoor seating)"
+          value={search.features}
+          onChange={(e) => setSearch({ ...search, features: e.target.value })}
+          className="p-2 border rounded"
+        />
+        <button
+          onClick={handleSearch}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          Search
+        </button>
+      </div>
+
+      {/* 🏨 Restaurant Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {restaurants.map((restaurant) => (
           <RestaurantCard key={restaurant._id} restaurant={restaurant} />

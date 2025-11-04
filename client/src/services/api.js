@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'https://restaurant-reservation-platform-cefo.onrender.com/api', // ✅ LIVE backend
+  baseURL: 'https://restaurant-reservation-platform-cefo.onrender.com/api',
 });
 
 // 🔐 Automatically attach token to every request
@@ -31,3 +31,6 @@ export const initiatePayment = async () => {
   const res = await API.post('/payments/create-checkout-session');
   return res.data.url;
 };
+
+// ✅ Fix: export default instance
+export default API;

@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import axios from 'axios';
 
+const BASE_URL = 'https://restaurant-reservation-platform-cefo.onrender.com/api';
+
 const SearchBar = ({ setResults }) => {
   const [filters, setFilters] = useState({ cuisine: '', location: '', features: '' });
 
   const handleSearch = async () => {
     try {
-      const res = await axios.get('http://https://restaurant-reservation-platform-cefo.onrender.com/api/restaurants/search', {
+      const res = await axios.get(`${BASE_URL}/restaurants/search`, {
         params: filters
       });
       setResults(res.data);

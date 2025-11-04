@@ -28,7 +28,7 @@ export const searchRestaurants = async (req, res) => {
     const { cuisine, location, features } = req.query;
 
     const query = {};
-    if (cuisine) query.cuisineType = { $regex: cuisine, $options: 'i' };
+    if (cuisine) query.cuisine = { $regex: cuisine, $options: 'i' };
     if (location) query.location = { $regex: location, $options: 'i' };
     if (features) {
       const featureArray = features.split(',').map(f => f.trim());
@@ -42,10 +42,13 @@ export const searchRestaurants = async (req, res) => {
   }
 };
 
-// ✅ Get restaurant by ID
+// ✅ Get restaurant by ID with reviews populated
 export const getRestaurantById = async (req, res) => {
   try {
-    const restaurant = await Restaurant.findById(req.params.id);
+    const restaurant = await Restaurant.findById(req.params.id).populate({
+      path: 'reviews',
+      populate: { path: 'user', select: 'name' }
+    });
     if (!restaurant) return res.status(404).json({ error: 'Restaurant not found' });
     res.status(200).json(restaurant);
   } catch (err) {
@@ -56,11 +59,11 @@ export const getRestaurantById = async (req, res) => {
 // ✅ Get recommendations based on user review history
 export const getRecommendations = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId;
     const userReviews = await Review.find({ user: userId }).populate('restaurant');
-    const likedCuisines = [...new Set(userReviews.map(r => r.restaurant.cuisineType))];
+    const likedCuisines = [...new Set(userReviews.map(r => r.restaurant.cuisine))];
 
-    const recommended = await Restaurant.find({ cuisineType: { $in: likedCuisines } }).limit(5);
+    const recommended = await Restaurant.find({ cuisine: { $in: likedCuisines } }).limit(5);
     res.status(200).json(recommended);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch recommendations', details: err.message });

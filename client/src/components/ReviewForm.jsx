@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import axios from 'axios';
+import axios from '../services/api';
 
-const ReviewForm = ({ restaurantId }) => {
+const ReviewForm = ({ restaurantId, onReviewSubmitted }) => {
   const [formData, setFormData] = useState({
-    reviewer: '',
     rating: '',
-    comment: '',
+    text: ''
   });
 
   const handleChange = (e) => {
@@ -15,49 +14,46 @@ const ReviewForm = ({ restaurantId }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://https://restaurant-reservation-platform-cefo.onrender.com/api/reviews', {
+      await axios.post('/reviews', {
         ...formData,
-        restaurantId,
+        restaurant: restaurantId
+      }, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
       });
-      alert('Review submitted!');
-      setFormData({ reviewer: '', rating: '', comment: '' });
+      alert('✅ Review submitted!');
+      setFormData({ rating: '', text: '' });
+      if (onReviewSubmitted) onReviewSubmitted(); // optional refresh
     } catch (err) {
       console.error('Review submission failed:', err);
+      alert('❌ Failed to submit review.');
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mt-4 p-4 bg-white shadow rounded">
+    <form onSubmit={handleSubmit} className="mt-6 p-4 bg-white shadow rounded">
       <h3 className="text-lg font-bold mb-2">Leave a Review</h3>
-      <input
-        type="text"
-        name="reviewer"
-        value={formData.reviewer}
-        onChange={handleChange}
-        placeholder="Your Name"
-        className="w-full mb-2 p-2 border rounded"
-        required
-      />
       <input
         type="number"
         name="rating"
         value={formData.rating}
         onChange={handleChange}
-        placeholder="Rating (1-5)"
+        placeholder="Rating (1–5)"
         className="w-full mb-2 p-2 border rounded"
         min="1"
         max="5"
         required
       />
       <textarea
-        name="comment"
-        value={formData.comment}
+        name="text"
+        value={formData.text}
         onChange={handleChange}
         placeholder="Your review"
         className="w-full mb-2 p-2 border rounded"
         required
       />
-      <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+      <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
         Submit Review
       </button>
     </form>
