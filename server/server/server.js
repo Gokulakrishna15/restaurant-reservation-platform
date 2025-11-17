@@ -15,9 +15,20 @@ import paymentRoutes from './routes/payments.js';
 
 const app = express();
 
-// ✅ CORS: Allow Netlify + credentials + preflight
+// ✅ CORS: Allow Netlify + localhost
+const allowedOrigins = [
+  'https://eclectic-cucurucho-a9fcf2.netlify.app',
+  'http://localhost:5173'
+];
+
 app.use(cors({
-  origin: 'https://eclectic-cucurucho-a9fcf2.netlify.app',
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -26,6 +37,7 @@ app.use(cors({
 // ✅ Handle preflight requests
 app.options('*', cors());
 
+// ✅ Middleware
 app.use(express.json());
 
 // ✅ MongoDB Connection
