@@ -3,30 +3,37 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 import Login from './components/Login';
 import Signup from './components/Signup';
-import ProtectedApp from './components/ProtectedApp';
-import ReservationForm from './components/ReservationForm';
-import ReservationList from './components/ReservationList';
 import RestaurantList from './components/RestaurantList';
 import RestaurantProfile from './components/RestaurantProfile';
 import ReviewForm from './components/ReviewForm';
+import ReservationForm from './components/ReservationForm';
+import ReservationList from './components/ReservationList';
+import ImageUpload from './components/ImageUpload';
 import AdminDashboard from './components/AdminDashboard';
 import AdminReservations from './components/AdminReservations';
 import AdminReviews from './components/AdminReviews';
-import PrivateRoute from './components/PrivateRoute'; // ✅ Import wrapper
+import PrivateRoute from './components/PrivateRoute';
 
 export default function App() {
   return (
     <Router>
       <Routes>
-        {/* ✅ Public Routes */}
+        {/* Public Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Signup />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/restaurants" element={<RestaurantList />} />
         <Route path="/restaurants/:id" element={<RestaurantProfile />} />
         <Route path="/review/:restaurantId" element={<ReviewForm />} />
 
-        {/* ✅ Protected Routes */}
+        {/* Protected Routes */}
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <RestaurantList />
+            </PrivateRoute>
+          }
+        />
         <Route
           path="/reserve"
           element={
@@ -40,6 +47,14 @@ export default function App() {
           element={
             <PrivateRoute>
               <ReservationList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/upload"
+          element={
+            <PrivateRoute>
+              <ImageUpload />
             </PrivateRoute>
           }
         />
@@ -64,14 +79,6 @@ export default function App() {
           element={
             <PrivateRoute>
               <AdminReviews />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/*"
-          element={
-            <PrivateRoute>
-              <ProtectedApp />
             </PrivateRoute>
           }
         />
