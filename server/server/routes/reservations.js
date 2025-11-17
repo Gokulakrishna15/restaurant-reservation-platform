@@ -6,11 +6,11 @@ import {
   getReservations
 } from '../controllers/reservationController.js';
 
-import { verifyToken } from '../middleware/verifyToken.js'; // ✅ Import middleware
+import verifyToken from '../middleware/verifyToken.js'; // ✅ Corrected import
 
 const router = express.Router();
 
-// ✅ Protect all routes with verifyToken
+// ✅ All routes protected by verifyToken
 router.get('/', verifyToken, getReservations);
 router.post('/', verifyToken, createReservation);
 router.put('/:id', verifyToken, updateReservation);
