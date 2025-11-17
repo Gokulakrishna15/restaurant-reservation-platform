@@ -3,14 +3,17 @@ import {
   createReservation,
   updateReservation,
   deleteReservation,
-  getReservations // ✅ Add this
+  getReservations
 } from '../controllers/reservationController.js';
+
+import { verifyToken } from '../middleware/verifyToken.js'; // ✅ Import middleware
 
 const router = express.Router();
 
-router.get('/', getReservations); // ✅ Add this route
-router.post('/', createReservation);
-router.put('/:id', updateReservation);
-router.delete('/:id', deleteReservation);
+// ✅ Protect all routes with verifyToken
+router.get('/', verifyToken, getReservations);
+router.post('/', verifyToken, createReservation);
+router.put('/:id', verifyToken, updateReservation);
+router.delete('/:id', verifyToken, deleteReservation);
 
 export default router;

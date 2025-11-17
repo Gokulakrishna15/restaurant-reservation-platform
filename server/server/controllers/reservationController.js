@@ -2,7 +2,7 @@ import Reservation from '../models/Reservation.js';
 
 export const getReservations = async (req, res) => {
   try {
-    const reservations = await Reservation.find({ user: req.userId }).populate('restaurant user');
+    const reservations = await Reservation.find({ user: req.user._id }).populate('restaurant user');
     res.json(reservations); // ✅ Only return current user's reservations
   } catch (err) {
     console.error('❌ Fetch error:', err.message);
@@ -20,7 +20,7 @@ export const createReservation = async (req, res) => {
     }
 
     const reservation = new Reservation({
-      user: req.userId, // ✅ Link to logged-in user
+      user: req.user._id, // ✅ Corrected from req.userId
       restaurant,
       date,
       timeSlot,
