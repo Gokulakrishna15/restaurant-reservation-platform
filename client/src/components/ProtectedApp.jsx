@@ -5,7 +5,6 @@ import ReservationForm from './ReservationForm';
 import ReservationList from './ReservationList';
 import ImageUpload from './ImageUpload';
 import AdminDashboard from './AdminDashboard';
-import PrivateRoute from './PrivateRoute';
 
 export default function ProtectedApp() {
   return (
@@ -13,21 +12,13 @@ export default function ProtectedApp() {
       <h1 className="text-3xl font-bold text-center text-blue-700">
         Restaurant Reservation Platform
       </h1>
+
       <Routes>
-        <Route
-          path="/*" // ✅ Matches App.jsx route
-          element={
-            <PrivateRoute>
-              <>
-                <RestaurantList />
-                <ReservationForm />
-                <ReservationList />
-                <ImageUpload />
-                <AdminDashboard />
-              </>
-            </PrivateRoute>
-          }
-        />
+        <Route path="/" element={<RestaurantList />} />
+        <Route path="/reserve" element={<ReservationForm />} />
+        <Route path="/my-reservations" element={<ReservationList />} />
+        <Route path="/upload" element={<ImageUpload />} />
+        <Route path="/admin" element={<AdminDashboard />} />
       </Routes>
     </div>
   );
