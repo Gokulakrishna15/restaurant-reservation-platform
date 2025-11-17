@@ -10,28 +10,71 @@ import RestaurantList from './components/RestaurantList';
 import RestaurantProfile from './components/RestaurantProfile';
 import ReviewForm from './components/ReviewForm';
 import AdminDashboard from './components/AdminDashboard';
-import AdminReservations from './components/AdminReservations'; // ✅ NEW
-import AdminReviews from './components/AdminReviews'; // ✅ NEW
+import AdminReservations from './components/AdminReservations';
+import AdminReviews from './components/AdminReviews';
+import PrivateRoute from './components/PrivateRoute'; // ✅ Import wrapper
 
 export default function App() {
   return (
     <Router>
       <Routes>
-        {/* Public Routes */}
+        {/* ✅ Public Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Signup />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/restaurants" element={<RestaurantList />} />
         <Route path="/restaurants/:id" element={<RestaurantProfile />} />
-        <Route path="/reserve" element={<ReservationForm />} />
         <Route path="/review/:restaurantId" element={<ReviewForm />} />
 
-        {/* Protected Routes */}
-        <Route path="/my-reservations" element={<ReservationList />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/reservations" element={<AdminReservations />} />
-        <Route path="/admin/reviews" element={<AdminReviews />} />
-        <Route path="/*" element={<ProtectedApp />} />
+        {/* ✅ Protected Routes */}
+        <Route
+          path="/reserve"
+          element={
+            <PrivateRoute>
+              <ReservationForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/my-reservations"
+          element={
+            <PrivateRoute>
+              <ReservationList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <PrivateRoute>
+              <AdminDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/reservations"
+          element={
+            <PrivateRoute>
+              <AdminReservations />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/reviews"
+          element={
+            <PrivateRoute>
+              <AdminReviews />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/*"
+          element={
+            <PrivateRoute>
+              <ProtectedApp />
+            </PrivateRoute>
+          }
+        />
       </Routes>
     </Router>
   );
