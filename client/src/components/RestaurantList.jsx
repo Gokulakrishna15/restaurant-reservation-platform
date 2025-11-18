@@ -10,17 +10,24 @@ const RestaurantList = () => {
     location: '',
     features: ''
   });
+  const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
+  const [noResults, setNoResults] = useState(false);
 
   const fetchRestaurants = async () => {
     try {
       const res = await getRestaurants();
       setRestaurants(res.data);
+      setNoResults(res.data.length === 0);
     } catch (error) {
       console.error('Error fetching restaurants:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSearch = async () => {
+    setSearching(true);
     try {
       const params = new URLSearchParams();
       if (search.cuisine) params.append('cuisine', search.cuisine);
@@ -29,8 +36,12 @@ const RestaurantList = () => {
 
       const res = await axios.get(`/restaurants/search?${params.toString()}`);
       setRestaurants(res.data);
+      setNoResults(res.data.length === 0);
     } catch (err) {
       console.error('Search error:', err);
+      setNoResults(true);
+    } finally {
+      setSearching(false);
     }
   };
 
@@ -69,16 +80,22 @@ const RestaurantList = () => {
           onClick={handleSearch}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
-          Search
+          {searching ? 'Searching...' : 'Search'}
         </button>
       </div>
 
       {/* 🏨 Restaurant Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {restaurants.map((restaurant) => (
-          <RestaurantCard key={restaurant._id} restaurant={restaurant} />
-        ))}
-      </div>
+      {loading ? (
+        <p className="text-gray-500">Loading restaurants...</p>
+      ) : noResults ? (
+        <p className="text-red-600 font-medium">No restaurants found matching your search.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {restaurants.map((restaurant) => (
+            <RestaurantCard key={restaurant._id} restaurant={restaurant} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

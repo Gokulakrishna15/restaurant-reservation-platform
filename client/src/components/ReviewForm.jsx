@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from '../services/api';
 
 const ReviewForm = ({ restaurantId, onReviewSubmitted }) => {
@@ -6,6 +6,31 @@ const ReviewForm = ({ restaurantId, onReviewSubmitted }) => {
     rating: '',
     text: ''
   });
+  const [hasReservation, setHasReservation] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkReservation = async () => {
+      try {
+        const res = await axios.get(`/reservations/my`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        // ✅ Check if user has a reservation for this restaurant
+        const match = res.data.find(r => r.restaurant === restaurantId);
+        setHasReservation(!!match);
+      } catch (err) {
+        console.error('Error checking reservation:', err);
+        setHasReservation(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkReservation();
+  }, [restaurantId]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -14,22 +39,38 @@ const ReviewForm = ({ restaurantId, onReviewSubmitted }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('/reviews', {
-        ...formData,
-        restaurant: restaurantId
-      }, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+      await axios.post(
+        '/reviews',
+        {
+          ...formData,
+          restaurant: restaurantId
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
         }
-      });
+      );
       alert('✅ Review submitted!');
       setFormData({ rating: '', text: '' });
-      if (onReviewSubmitted) onReviewSubmitted(); // optional refresh
+      if (onReviewSubmitted) onReviewSubmitted();
     } catch (err) {
       console.error('Review submission failed:', err);
       alert('❌ Failed to submit review.');
     }
   };
+
+  if (loading) return <p className="text-sm text-gray-500">Checking reservation status...</p>;
+
+  if (!hasReservation) {
+    return (
+      <div className="mt-6 p-4 bg-yellow-100 border border-yellow-400 rounded">
+        <p className="text-sm text-gray-700">
+          ⚠️ You must have a reservation at this restaurant to leave a review.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="mt-6 p-4 bg-white shadow rounded">
@@ -53,7 +94,10 @@ const ReviewForm = ({ restaurantId, onReviewSubmitted }) => {
         className="w-full mb-2 p-2 border rounded"
         required
       />
-      <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+      <button
+        type="submit"
+        className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+      >
         Submit Review
       </button>
     </form>

@@ -31,13 +31,23 @@ const ReservationForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('/reservations', formData, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+      const res = await axios.post(
+        '/reservations',
+        {
+          ...formData,
+          restaurantId: formData.restaurant // ✅ Explicitly send restaurantId
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
         }
-      });
-      alert('✅ Reservation confirmed!');
-      setReservationId(res.data._id); // ✅ Store reservation ID
+      );
+
+      const restaurantName = restaurants.find(r => r._id === formData.restaurant)?.name;
+      alert(`✅ Reservation confirmed at ${restaurantName}!`);
+
+      setReservationId(res.data._id);
       setFormData({
         restaurant: '',
         date: '',
@@ -61,13 +71,15 @@ const ReservationForm = () => {
       return;
     }
     try {
-      const res = await axios.post('/payments/create-checkout-session', {
-        reservationId
-      }, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+      const res = await axios.post(
+        '/payments/create-checkout-session',
+        { reservationId },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
         }
-      });
+      );
       window.location.href = res.data.url;
     } catch (err) {
       console.error('Payment error:', err);
@@ -76,7 +88,10 @@ const ReservationForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto p-4 bg-white shadow-md rounded">
+    <form
+      onSubmit={handleSubmit}
+      className="max-w-md mx-auto p-4 bg-white shadow-md rounded"
+    >
       <h2 className="text-xl font-bold mb-4">Make a Reservation</h2>
 
       <label className="block mb-2">Restaurant</label>
@@ -89,17 +104,69 @@ const ReservationForm = () => {
       >
         <option value="">Select a restaurant</option>
         {restaurants.map((r) => (
-          <option key={r._id} value={r._id}>{r.name}</option>
+          <option key={r._id} value={r._id}>
+            {r.name}
+          </option>
         ))}
       </select>
 
-      <input type="date" name="date" value={formData.date} onChange={handleChange} required className="w-full mb-2 p-2 border rounded" />
-      <input type="time" name="timeSlot" value={formData.timeSlot} onChange={handleChange} required className="w-full mb-2 p-2 border rounded" />
-      <input type="number" name="numberOfGuests" value={formData.numberOfGuests} onChange={handleChange} required className="w-full mb-2 p-2 border rounded" />
-      <textarea name="specialRequests" value={formData.specialRequests} onChange={handleChange} placeholder="Special Requests" className="w-full mb-2 p-2 border rounded" />
+      {formData.restaurant && (
+        <div className="mb-4 text-sm text-gray-600">
+          Selected: {restaurants.find(r => r._id === formData.restaurant)?.name}
+        </div>
+      )}
 
-      <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Submit</button>
-      <button type="button" onClick={handlePayment} className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 mt-2">Pay ₹500 to Confirm</button>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <input
+          type="date"
+          name="date"
+          value={formData.date}
+          onChange={handleChange}
+          required
+          className="w-full p-2 border rounded"
+        />
+        <input
+          type="time"
+          name="timeSlot"
+          value={formData.timeSlot}
+          onChange={handleChange}
+          required
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <input
+        type="number"
+        name="numberOfGuests"
+        value={formData.numberOfGuests}
+        onChange={handleChange}
+        required
+        placeholder="Number of Guests"
+        className="w-full mt-4 p-2 border rounded"
+      />
+
+      <textarea
+        name="specialRequests"
+        value={formData.specialRequests}
+        onChange={handleChange}
+        placeholder="Special Requests"
+        className="w-full mt-2 p-2 border rounded"
+      />
+
+      <button
+        type="submit"
+        className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mt-4"
+      >
+        Submit Reservation
+      </button>
+
+      <button
+        type="button"
+        onClick={handlePayment}
+        className="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 mt-2"
+      >
+        Pay ₹500 to Confirm
+      </button>
     </form>
   );
 };

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from '../services/api';
 import ReviewForm from './ReviewForm';
@@ -7,18 +7,20 @@ const RestaurantProfile = () => {
   const { id } = useParams();
   const [restaurant, setRestaurant] = useState(null);
 
-  const fetchRestaurant = async () => {
+  const fetchRestaurant = useCallback(async () => {
     try {
-      const res = await axios.get(`/restaurants/${id}`);
+      const res = await axios.get(`/restaurants/${id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
       setRestaurant(res.data);
     } catch (err) {
       console.error('Error fetching restaurant:', err);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchRestaurant();
-  }, [id]);
+  }, [fetchRestaurant]);
 
   if (!restaurant) return <p className="p-4">Loading...</p>;
 
@@ -37,9 +39,13 @@ const RestaurantProfile = () => {
       <p className="mb-4"><strong>Features:</strong> {restaurant.features?.join(', ')}</p>
 
       <h3 className="text-xl font-semibold mb-2">Menu</h3>
-      <ul className="list-disc pl-5 mb-4">
-        {restaurant.menu?.map((item, i) => <li key={i}>{item}</li>)}
-      </ul>
+      {restaurant.menu?.length > 0 ? (
+        <ul className="list-disc pl-5 mb-4">
+          {restaurant.menu.map((item, i) => <li key={i}>{item}</li>)}
+        </ul>
+      ) : (
+        <p className="mb-4 text-gray-600">No menu items available.</p>
+      )}
 
       <h3 className="text-xl font-semibold mb-2">Reviews</h3>
       {restaurant.reviews?.length > 0 ? (
@@ -50,7 +56,7 @@ const RestaurantProfile = () => {
           </div>
         ))
       ) : (
-        <p>No reviews yet.</p>
+        <p className="mb-4 text-gray-600">No reviews yet.</p>
       )}
 
       {/* ✅ Review Form */}

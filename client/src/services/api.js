@@ -32,5 +32,4 @@ export const initiatePayment = async () => {
   return res.data.url;
 };
 
-// ✅ Fix: export default instance
 export default API;

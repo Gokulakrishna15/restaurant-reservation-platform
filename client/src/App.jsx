@@ -13,6 +13,9 @@ import AdminDashboard from './components/AdminDashboard';
 import AdminReservations from './components/AdminReservations';
 import AdminReviews from './components/AdminReviews';
 import PrivateRoute from './components/PrivateRoute';
+import Recommendations from './components/Recommendations';
+import PaymentSuccess from './components/PaymentSuccess';
+import PaymentCancel from './components/PaymentCancel';
 
 export default function App() {
   return (
@@ -24,6 +27,8 @@ export default function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/restaurants/:id" element={<RestaurantProfile />} />
         <Route path="/review/:restaurantId" element={<ReviewForm />} />
+        <Route path="/success" element={<PaymentSuccess />} />
+        <Route path="/cancel" element={<PaymentCancel />} />
 
         {/* Protected Routes */}
         <Route
@@ -31,6 +36,14 @@ export default function App() {
           element={
             <PrivateRoute>
               <RestaurantList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/recommendations"
+          element={
+            <PrivateRoute>
+              <Recommendations />
             </PrivateRoute>
           }
         />

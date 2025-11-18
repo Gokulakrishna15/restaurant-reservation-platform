@@ -12,9 +12,29 @@ const AdminDashboard = () => {
     description: ''
   });
   const [loading, setLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checkingRole, setCheckingRole] = useState(true);
   const navigate = useNavigate();
 
   const token = localStorage.getItem('token');
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      try {
+        const res = await axios.get('/users/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setIsAdmin(res.data.role === 'admin');
+      } catch (err) {
+        console.error('Failed to check user role:', err);
+        setIsAdmin(false);
+      } finally {
+        setCheckingRole(false);
+      }
+    };
+
+    checkAdmin();
+  }, []);
 
   const fetchRestaurants = async () => {
     try {
@@ -28,8 +48,8 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    fetchRestaurants();
-  }, []);
+    if (isAdmin) fetchRestaurants();
+  }, [isAdmin]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -69,6 +89,17 @@ const AdminDashboard = () => {
     localStorage.removeItem('token');
     navigate('/login');
   };
+
+  if (checkingRole) return <p className="text-sm text-gray-500">Checking admin access...</p>;
+
+  if (!isAdmin) {
+    return (
+      <div className="max-w-xl mx-auto mt-10 p-6 bg-yellow-100 border border-yellow-400 rounded">
+        <h2 className="text-xl font-bold text-red-600 mb-2">Access Denied</h2>
+        <p className="text-gray-700">⚠️ You do not have admin privileges to view this dashboard.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto mt-8">
