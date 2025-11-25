@@ -1,6 +1,8 @@
+// client/src/services/api.js
 import axios from 'axios';
 
 const API = axios.create({
+  // ✅ baseURL already includes /api
   baseURL: 'https://restaurant-reservation-platform-cefo.onrender.com/api',
 });
 
@@ -15,6 +17,7 @@ API.interceptors.request.use((config) => {
 
 // 🏨 Restaurants
 export const getRestaurants = () => API.get('/restaurants');
+export const getRestaurantById = (id) => API.get(`/restaurants/${id}`); // ✅ added helper
 
 // 📅 Reservations
 export const createReservation = (data) => API.post('/reservations', data);

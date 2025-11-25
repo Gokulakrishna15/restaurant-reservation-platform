@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { getRestaurants } from '../services/api';
+import axios from '../services/api'; // ✅ use your configured axios instance
 import RestaurantCard from './RestaurantCard';
-import axios from '../services/api';
 
 const RestaurantList = () => {
-  const [restaurants, setRestaurants] = useState([]);
+  const [restaurants, setRestaurants] = useState([]); // ✅ always array
   const [search, setSearch] = useState({
     cuisine: '',
     location: '',
@@ -16,11 +15,13 @@ const RestaurantList = () => {
 
   const fetchRestaurants = async () => {
     try {
-      const res = await getRestaurants();
-      setRestaurants(res.data);
-      setNoResults(res.data.length === 0);
+      const res = await axios.get('/restaurants'); // ✅ list endpoint
+      const data = Array.isArray(res.data) ? res.data : []; // defensive
+      setRestaurants(data);
+      setNoResults(data.length === 0);
     } catch (error) {
       console.error('Error fetching restaurants:', error);
+      setNoResults(true);
     } finally {
       setLoading(false);
     }
@@ -35,8 +36,9 @@ const RestaurantList = () => {
       if (search.features) params.append('features', search.features);
 
       const res = await axios.get(`/restaurants/search?${params.toString()}`);
-      setRestaurants(res.data);
-      setNoResults(res.data.length === 0);
+      const data = Array.isArray(res.data) ? res.data : []; // defensive
+      setRestaurants(data);
+      setNoResults(data.length === 0);
     } catch (err) {
       console.error('Search error:', err);
       setNoResults(true);

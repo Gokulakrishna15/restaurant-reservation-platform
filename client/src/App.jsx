@@ -5,7 +5,6 @@ import Login from './components/Login';
 import Signup from './components/Signup';
 import RestaurantList from './components/RestaurantList';
 import RestaurantProfile from './components/RestaurantProfile';
-import ReviewForm from './components/ReviewForm';
 import ReservationForm from './components/ReservationForm';
 import ReservationList from './components/ReservationList';
 import ImageUpload from './components/ImageUpload';
@@ -23,16 +22,22 @@ export default function App() {
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Signup />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/restaurants/:id" element={<RestaurantProfile />} />
-        <Route path="/review/:restaurantId" element={<ReviewForm />} />
         <Route path="/success" element={<PaymentSuccess />} />
         <Route path="/cancel" element={<PaymentCancel />} />
 
         {/* Protected Routes */}
         <Route
           path="/"
+          element={
+            <PrivateRoute>
+              <RestaurantList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/restaurants"
           element={
             <PrivateRoute>
               <RestaurantList />
@@ -48,7 +53,7 @@ export default function App() {
           }
         />
         <Route
-          path="/reserve"
+          path="/reserve/:id"
           element={
             <PrivateRoute>
               <ReservationForm />
@@ -95,6 +100,9 @@ export default function App() {
             </PrivateRoute>
           }
         />
+
+        {/* Catch-all route for 404 */}
+        <Route path="*" element={<p className="p-6 text-red-600">Page not found</p>} />
       </Routes>
     </Router>
   );

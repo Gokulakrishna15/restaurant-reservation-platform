@@ -1,71 +1,93 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import Restaurant from './models/Restaurant.js';
+import Review from './models/Review.js';
+import User from './models/User.js'; // make sure you have a User model
 
 dotenv.config();
 
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('✅ MongoDB connected'))
-.catch((err) => console.error('❌ MongoDB connection error:', err));
+const MONGO_URI = process.env.MONGO_URI;
 
-const sampleRestaurants = [
-  {
-    name: 'Spice Garden',
-    cuisine: 'Indian',
-    location: 'Chennai',
-    priceRange: 'medium',
-    dietaryOptions: ['vegan', 'gluten-free'],
-    ambiance: ['family-friendly'],
-    features: ['outdoor seating', 'live music'],
-    imageUrl: 'https://example.com/spice-main.jpg',
-    photos: ['https://example.com/spice1.jpg', 'https://example.com/spice2.jpg'],
-    contact: '+91-9876543210',
-    hours: 'Mon–Fri: 11am–10pm',
-    menu: ['Paneer Tikka', 'Butter Naan']
-  },
-  {
-    name: 'Sushi World',
-    cuisine: 'Japanese',
-    location: 'Bangalore',
-    priceRange: 'high',
-    dietaryOptions: ['gluten-free'],
-    ambiance: ['romantic'],
-    features: ['reservations', 'Wi-Fi'],
-    imageUrl: 'https://example.com/sushi-main.jpg',
-    photos: ['https://example.com/sushi1.jpg'],
-    contact: '+91-9123456780',
-    hours: 'Tue–Sun: 12pm–11pm',
-    menu: ['California Roll', 'Miso Soup']
-  },
-  {
-    name: 'Pasta Palace',
-    cuisine: 'Italian',
-    location: 'Mumbai',
-    priceRange: 'low',
-    dietaryOptions: ['vegetarian'],
-    ambiance: ['casual'],
-    features: ['rooftop', 'live music'],
-    imageUrl: 'https://example.com/pasta-main.jpg',
-    photos: ['https://example.com/pasta1.jpg'],
-    contact: '+91-9988776655',
-    hours: 'Daily: 10am–9pm',
-    menu: ['Spaghetti Carbonara', 'Tiramisu']
-  }
-];
+mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(async () => {
+    console.log('✅ Connected to MongoDB');
 
-async function seedRestaurants() {
-  try {
-    await Restaurant.deleteMany();
-    await Restaurant.insertMany(sampleRestaurants);
-    console.log('✅ Sample restaurants seeded');
-  } catch (error) {
-    console.error('❌ Seeding error:', error);
-  } finally {
+    // Clear old data
+    await Restaurant.deleteMany({});
+    await Review.deleteMany({});
+
+    // Insert sample restaurants
+    const restaurants = await Restaurant.insertMany([
+      {
+        name: 'Spice Garden',
+        cuisine: 'Indian',
+        location: 'Chennai',
+        priceRange: 'medium',
+        features: ['outdoor seating'],
+        imageUrl: 'https://example.com/spice.jpg'
+      },
+      {
+        name: 'Sushi World',
+        cuisine: 'Japanese',
+        location: 'Bangalore',
+        priceRange: 'high',
+        features: ['live music'],
+        imageUrl: 'https://example.com/sushi.jpg'
+      },
+      {
+        name: 'Pasta Palace',
+        cuisine: 'Italian',
+        location: 'Mumbai',
+        priceRange: 'low',
+        features: ['family-friendly'],
+        imageUrl: 'https://example.com/pasta.jpg'
+      }
+    ]);
+
+    console.log('✅ Seeded restaurants:');
+    restaurants.forEach(r => console.log(`- ${r.name} (ID: ${r._id})`));
+
+    // Pick a sample user (make sure at least one exists in your users collection)
+    const sampleUser = await User.findOne();
+    if (!sampleUser) {
+      console.log('⚠️ No users found. Please register a user first.');
+      mongoose.connection.close();
+      return;
+    }
+
+    // Insert sample reviews linked to the actual restaurant IDs
+    const reviews = await Review.insertMany([
+      {
+        user: sampleUser._id,
+        restaurant: restaurants[0]._id,
+        rating: 5,
+        comment: 'Amazing Indian food with great spices!'
+      },
+      {
+        user: sampleUser._id,
+        restaurant: restaurants[1]._id,
+        rating: 4,
+        comment: 'Fresh sushi and nice ambiance.'
+      },
+      {
+        user: sampleUser._id,
+        restaurant: restaurants[2]._id,
+        rating: 3,
+        comment: 'Good pasta but service was slow.'
+      }
+    ]);
+
+    console.log('✅ Seeded reviews:');
+    reviews.forEach(rv => console.log(`- ${rv.comment} (Restaurant ID: ${rv.restaurant})`));
+
+    // Attach reviews to restaurants
+    for (let review of reviews) {
+      await Restaurant.findByIdAndUpdate(review.restaurant, {
+        $push: { reviews: review._id }
+      });
+    }
+
+    console.log('✅ Linked reviews to restaurants');
     mongoose.connection.close();
-  }
-}
-
-seedRestaurants();
+  })
+  .catch(err => console.error('❌ Error seeding:', err));
