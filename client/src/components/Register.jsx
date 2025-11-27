@@ -1,31 +1,31 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { registerUser } from "../services/authService";
+import { registerUser } from "../services/authService"; // ✅ Make sure you have this service
 
-export default function Signup() {
-  const [name, setName] = useState(""); // optional if API requires name
+export default function Register() {
+  const [name, setName] = useState("");       // optional if your API requires name
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSignup = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       const res = await registerUser({ name, email, password });
       console.log("✅ Registration successful:", res.data);
 
-      // Save token if API returns one
+      // Save token if your API returns one
       if (res.data.token) {
         localStorage.setItem("token", res.data.token);
       }
 
-      // Redirect to login after successful signup
+      // Redirect to login after successful registration
       navigate("/login");
     } catch (err) {
-      console.error("❌ Signup error:", err.response?.data || err.message);
-      alert(err.response?.data?.message || "Signup failed");
+      console.error("❌ Registration error:", err.response?.data || err.message);
+      alert(err.response?.data?.message || "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -37,7 +37,7 @@ export default function Signup() {
         Register
       </h2>
 
-      <form onSubmit={handleSignup} className="space-y-4">
+      <form onSubmit={handleRegister} className="space-y-4">
         <div>
           <label className="block mb-1 font-medium">Name</label>
           <input

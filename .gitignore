@@ -1,7 +1,14 @@
-git add .node_modules/
-.env
+# Dependencies
+node_modules/
+
+# Build outputs
 dist/
 build/
-*.jar
-*.txt
-restaurant-reservation-final.git
+
+# Environment variables
+.env
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
