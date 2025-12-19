@@ -3,11 +3,54 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Restaurant Reservation App</title>
+    <title>🍴 FoodieHub | Restaurant Reservation App</title>
+
+    <!-- SEO -->
+    <meta
+      name="description"
+      content="Discover, filter, and book your favorite restaurants anytime, anywhere."
+    />
+    <meta
+      name="keywords"
+      content="restaurant, reservation, booking, food, dining, foodiehub"
+    />
+    <meta name="theme-color" content="#16a34a" />
+
+    <!-- Social Sharing -->
+    <meta property="og:title" content="FoodieHub - Restaurant Reservation App" />
+    <meta property="og:description" content="Book tables easily with FoodieHub." />
+    <meta property="og:image" content="/cover.png" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
   </head>
-  <body>
-    <div id="root"></div>
+  <body class="font-inter bg-gray-50">
+    <!-- Loader (optional, can remove if not needed) -->
+    <div id="loader" style="display:flex;align-items:center;justify-content:center;height:100vh;background:#fff;color:#16a34a;font-family:Inter,sans-serif;">
+      <p>🍴 FoodieHub Loading...</p>
+    </div>
+
+    <!-- React Root -->
+    <main id="root"></main>
+
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Hide loader once React mounts
+      window.addEventListener("DOMContentLoaded", () => {
+        const loader = document.getElementById("loader");
+        if (loader) loader.style.display = "none";
+      });
+    </script>
   </body>
 </html>

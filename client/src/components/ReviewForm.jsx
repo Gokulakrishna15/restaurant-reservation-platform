@@ -1,28 +1,29 @@
-import { useState, useEffect } from 'react';
-import axios from '../services/api';
+import { useState, useEffect } from "react";
+import axios from "../services/api";
 
 const ReviewForm = ({ restaurantId, onReviewSubmitted }) => {
-  const [formData, setFormData] = useState({
-    rating: '',
-    text: ''
-  });
+  const [formData, setFormData] = useState({ rating: 0, comment: "" });
   const [hasReservation, setHasReservation] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     const checkReservation = async () => {
       try {
-        const res = await axios.get(`/reservations/my`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
+        const res = await axios.get("/reservations/my", {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
 
-        // ✅ Check if user has a reservation for this restaurant
-        const match = res.data.find(r => r.restaurant === restaurantId);
+        const match = res.data.find(
+          (r) =>
+            r.restaurant?._id?.toString() === restaurantId.toString() ||
+            r.restaurant?.toString() === restaurantId.toString()
+        );
         setHasReservation(!!match);
       } catch (err) {
-        console.error('Error checking reservation:', err);
+        console.error("Error checking reservation:", err);
         setHasReservation(false);
       } finally {
         setLoading(false);
@@ -36,27 +37,31 @@ const ReviewForm = ({ restaurantId, onReviewSubmitted }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleRatingClick = (val) => {
+    setFormData({ ...formData, rating: val });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
+    setError("");
+    setSuccess("");
+
     try {
       await axios.post(
-        '/reviews',
-        {
-          ...formData,
-          restaurant: restaurantId
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        }
+        "/reviews",
+        { ...formData, restaurant: restaurantId },
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
-      alert('✅ Review submitted!');
-      setFormData({ rating: '', text: '' });
+
+      setSuccess("✅ Review submitted!");
+      setFormData({ rating: 0, comment: "" });
       if (onReviewSubmitted) onReviewSubmitted();
     } catch (err) {
-      console.error('Review submission failed:', err);
-      alert('❌ Failed to submit review.');
+      console.error("Review submission failed:", err);
+      setError(err.response?.data?.error || "❌ Failed to submit review.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -73,33 +78,50 @@ const ReviewForm = ({ restaurantId, onReviewSubmitted }) => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-6 p-4 bg-white shadow rounded">
-      <h3 className="text-lg font-bold mb-2">Leave a Review</h3>
-      <input
-        type="number"
-        name="rating"
-        value={formData.rating}
-        onChange={handleChange}
-        placeholder="Rating (1–5)"
-        className="w-full mb-2 p-2 border rounded"
-        min="1"
-        max="5"
-        required
-      />
+    <form onSubmit={handleSubmit} className="mt-6 p-6 bg-white shadow rounded-xl">
+      <h3 className="text-xl font-bold text-blue-700 mb-4">Leave a Review</h3>
+
+      {/* Star Rating Selector */}
+      <div className="flex items-center gap-2 mb-4">
+        {[1, 2, 3, 4, 5].map((val) => (
+          <button
+            type="button"
+            key={val}
+            onClick={() => handleRatingClick(val)}
+            className={`text-2xl ${
+              formData.rating >= val ? "text-yellow-400" : "text-gray-300"
+            } hover:text-yellow-500 transition`}
+          >
+            ⭐
+          </button>
+        ))}
+        <span className="text-sm text-gray-600 ml-2">
+          {formData.rating ? `${formData.rating}/5` : "Select rating"}
+        </span>
+      </div>
+
+      {/* Comment */}
       <textarea
-        name="text"
-        value={formData.text}
+        name="comment"
+        value={formData.comment}
         onChange={handleChange}
-        placeholder="Your review"
-        className="w-full mb-2 p-2 border rounded"
+        placeholder="Share your experience..."
+        className="w-full mb-4 p-3 border rounded-lg focus:ring-2 focus:ring-blue-400"
         required
       />
+
+      {/* Submit Button */}
       <button
         type="submit"
-        className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+        disabled={submitting}
+        className="bg-gradient-to-r from-green-500 to-green-700 text-white px-6 py-2 rounded-lg font-semibold shadow hover:from-green-600 hover:to-green-800 transition disabled:opacity-50"
       >
-        Submit Review
+        {submitting ? "Submitting..." : "Submit Review"}
       </button>
+
+      {/* Feedback */}
+      {error && <p className="text-red-600 mt-3">{error}</p>}
+      {success && <p className="text-green-600 mt-3">{success}</p>}
     </form>
   );
 };
