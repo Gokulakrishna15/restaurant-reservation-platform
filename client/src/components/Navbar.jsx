@@ -1,51 +1,198 @@
-import React from "react";
-import { NavLink } from "react-router-dom";
+import React, { useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 
 const Navbar = () => {
+  const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Get user from localStorage
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const isAdmin = user?.role === "admin";
+
+  const handleLogout = () => {
+    // Clear localStorage
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    // Close menu
+    setMenuOpen(false);
+
+    // Redirect to login
+    navigate("/login");
+  };
+
   return (
-    <nav className="bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+    <nav className="bg-gradient-to-r from-purple-900 via-black to-pink-900 border-b-4 border-pink-500 text-green-300 shadow-lg font-mono sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
         {/* Logo */}
-        <NavLink to="/" className="text-xl font-extrabold tracking-tight">
+        <NavLink
+          to="/"
+          className="text-2xl font-extrabold tracking-widest text-pink-400 uppercase hover:text-cyan-300 transition"
+        >
           🍴 FoodieHub
         </NavLink>
 
-        {/* Links */}
-        <div className="flex gap-6">
-          <NavLink
-            to="/restaurants"
-            className={({ isActive }) =>
-              isActive ? "font-semibold underline" : "hover:opacity-80"
-            }
-          >
-            Restaurants
-          </NavLink>
-          <NavLink
-            to="/my-reservations"
-            className={({ isActive }) =>
-              isActive ? "font-semibold underline" : "hover:opacity-80"
-            }
-          >
-            My Reservations
-          </NavLink>
-          <NavLink
-            to="/recommendations"
-            className={({ isActive }) =>
-              isActive ? "font-semibold underline" : "hover:opacity-80"
-            }
-          >
-            Recommendations
-          </NavLink>
-          <NavLink
-            to="/admin"
-            className={({ isActive }) =>
-              isActive ? "font-semibold underline text-red-300" : "hover:opacity-80"
-            }
-          >
-            Admin
-          </NavLink>
+        {/* Desktop Links */}
+        <div className="hidden md:flex gap-8 items-center">
+          {token && (
+            <>
+              <NavLink
+                to="/restaurants"
+                className={({ isActive }) =>
+                  isActive
+                    ? "text-pink-400 font-bold underline"
+                    : "hover:text-cyan-300 transition"
+                }
+              >
+                🍽 Restaurants
+              </NavLink>
+
+              <NavLink
+                to="/my-reservations"
+                className={({ isActive }) =>
+                  isActive
+                    ? "text-pink-400 font-bold underline"
+                    : "hover:text-cyan-300 transition"
+                }
+              >
+                📅 Reservations
+              </NavLink>
+
+              <NavLink
+                to="/recommendations"
+                className={({ isActive }) =>
+                  isActive
+                    ? "text-pink-400 font-bold underline"
+                    : "hover:text-cyan-300 transition"
+                }
+              >
+                🎯 Recommendations
+              </NavLink>
+
+              {isAdmin && (
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) =>
+                    isActive
+                      ? "text-yellow-400 font-bold underline"
+                      : "hover:text-yellow-300 transition"
+                  }
+                >
+                  ⚡ Admin
+                </NavLink>
+              )}
+            </>
+          )}
+
+          {/* Auth Links */}
+          {!token ? (
+            <>
+              <NavLink
+                to="/login"
+                className="bg-gradient-to-r from-pink-500 to-purple-700 text-white px-4 py-2 rounded-lg font-bold hover:from-pink-600 hover:to-purple-800 transition"
+              >
+                Login
+              </NavLink>
+              <NavLink
+                to="/signup"
+                className="border-2 border-cyan-400 text-cyan-300 px-4 py-2 rounded-lg font-bold hover:bg-cyan-400 hover:text-black transition"
+              >
+                Sign Up
+              </NavLink>
+            </>
+          ) : (
+            <>
+              <span className="text-cyan-300">
+                👤 {user?.name || "User"}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-red-700 transition"
+              >
+                Logout
+              </button>
+            </>
+          )}
         </div>
+
+        {/* Mobile Menu Button */}
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="md:hidden text-pink-400 text-2xl"
+        >
+          ☰
+        </button>
       </div>
+
+      {/* Mobile Menu */}
+      {menuOpen && (
+        <div className="md:hidden bg-black border-t-2 border-pink-500 p-4 space-y-3">
+          {token && (
+            <>
+              <NavLink
+                to="/restaurants"
+                className="block hover:text-cyan-300 py-2"
+                onClick={() => setMenuOpen(false)}
+              >
+                🍽 Restaurants
+              </NavLink>
+              <NavLink
+                to="/my-reservations"
+                className="block hover:text-cyan-300 py-2"
+                onClick={() => setMenuOpen(false)}
+              >
+                📅 Reservations
+              </NavLink>
+              <NavLink
+                to="/recommendations"
+                className="block hover:text-cyan-300 py-2"
+                onClick={() => setMenuOpen(false)}
+              >
+                🎯 Recommendations
+              </NavLink>
+              {isAdmin && (
+                <NavLink
+                  to="/admin"
+                  className="block hover:text-yellow-300 py-2"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  ⚡ Admin
+                </NavLink>
+              )}
+            </>
+          )}
+
+          {!token ? (
+            <>
+              <NavLink
+                to="/login"
+                className="block bg-gradient-to-r from-pink-500 to-purple-700 text-white px-4 py-2 rounded-lg font-bold text-center"
+                onClick={() => setMenuOpen(false)}
+              >
+                Login
+              </NavLink>
+              <NavLink
+                to="/signup"
+                className="block border-2 border-cyan-400 text-cyan-300 px-4 py-2 rounded-lg font-bold text-center"
+                onClick={() => setMenuOpen(false)}
+              >
+                Sign Up
+              </NavLink>
+            </>
+          ) : (
+            <>
+              <p className="text-cyan-300 py-2">👤 {user?.name || "User"}</p>
+              <button
+                onClick={handleLogout}
+                className="w-full bg-red-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-red-700"
+              >
+                Logout
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </nav>
   );
 };
