@@ -2,8 +2,8 @@
 import axios from 'axios';
 
 const API = axios.create({
-  // ✅ baseURL already includes /api
-  baseURL: 'https://restaurant-reservation-platform-cefo.onrender.com/api',
+  // ✅ Now pointing to local server
+  baseURL: 'http://localhost:5000/api',
 });
 
 // 🔐 Automatically attach token to every request
@@ -17,7 +17,7 @@ API.interceptors.request.use((config) => {
 
 // 🏨 Restaurants
 export const getRestaurants = () => API.get('/restaurants');
-export const getRestaurantById = (id) => API.get(`/restaurants/${id}`); // ✅ added helper
+export const getRestaurantById = (id) => API.get(`/restaurants/${id}`);
 
 // 📅 Reservations
 export const createReservation = (data) => API.post('/reservations', data);

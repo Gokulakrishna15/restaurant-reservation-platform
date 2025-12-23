@@ -12,9 +12,8 @@ const Recommendations = ({ userToken }) => {
     const fetchRecommendations = async () => {
       setLoading(true);
       try {
-        const res = await axios.get("/api/restaurants/recommendations/me", {
-          headers: { Authorization: `Bearer ${userToken}` },
-        });
+        // ✅ FIX: Remove duplicate /api (axios baseURL already has it)
+        const res = await axios.get("/restaurants/recommendations/me");
 
         // Adjust depending on backend response shape
         const data = res.data?.data || res.data;
@@ -30,7 +29,10 @@ const Recommendations = ({ userToken }) => {
       }
     };
 
-    if (userToken) {
+    // ✅ FIX: Check localStorage if userToken prop is not provided
+    const token = userToken || localStorage.getItem('token');
+    
+    if (token) {
       fetchRecommendations();
     } else {
       setError("⚠️ You must be logged in to see recommendations.");
@@ -59,7 +61,7 @@ const Recommendations = ({ userToken }) => {
         </p>
       ) : restaurants.length === 0 ? (
         <p className="text-cyan-300 text-center">
-          No recommendations available.
+          No recommendations available yet. Make some reservations and leave reviews to get personalized suggestions!
         </p>
       ) : (
         <div className="space-y-4">

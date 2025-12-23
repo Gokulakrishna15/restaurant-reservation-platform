@@ -5,7 +5,9 @@ import "./index.css";
 import ErrorBoundary from "./components/ErrorBoundary";
 // import { AuthProvider } from "./context/AuthContext"; // optional
 
-ReactDOM.createRoot(document.getElementById("root")).render(
+const root = ReactDOM.createRoot(document.getElementById("root"));
+
+root.render(
   <React.StrictMode>
     {/* Wrap with providers if needed */}
     {/* <AuthProvider> */}
@@ -15,3 +17,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     {/* </AuthProvider> */}
   </React.StrictMode>
 );
+
+// ✅ Hide loader once React mounts
+const loader = document.getElementById("loader");
+if (loader) loader.style.display = "none";

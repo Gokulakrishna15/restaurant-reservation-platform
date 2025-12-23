@@ -9,14 +9,15 @@ const RestaurantList = () => {
   const [searching, setSearching] = useState(false);
   const [noResults, setNoResults] = useState(false);
   const [error, setError] = useState("");
-  const [sortBy, setSortBy] = useState(""); // ✅ sorting state
+  const [sortBy, setSortBy] = useState("");
 
   const fetchRestaurants = async () => {
     try {
       setLoading(true);
       setError("");
       const res = await axios.get("/restaurants");
-      const data = Array.isArray(res.data) ? res.data : [];
+      // ✅ FIX: Backend returns {success: true, data: [...]}
+      const data = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
       setRestaurants(data);
       setNoResults(data.length === 0);
     } catch (error) {
@@ -29,6 +30,12 @@ const RestaurantList = () => {
   };
 
   const handleSearch = async () => {
+    // ✅ FIX: If all search fields are empty, just fetch all restaurants
+    if (!search.cuisine && !search.location && !search.features) {
+      fetchRestaurants();
+      return;
+    }
+
     setSearching(true);
     setError("");
     try {
@@ -38,7 +45,8 @@ const RestaurantList = () => {
       if (search.features) params.append("features", search.features);
 
       const res = await axios.get(`/restaurants/search?${params.toString()}`);
-      const data = Array.isArray(res.data) ? res.data : [];
+      // ✅ FIX: Backend returns {success: true, data: [...]}
+      const data = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
       setRestaurants(data);
       setNoResults(data.length === 0);
     } catch (err) {

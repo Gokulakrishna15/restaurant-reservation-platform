@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API = import.meta.env.VITE_API_BASE || "https://restaurant-reservation-platform-cefo.onrender.com/api";
+const API = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
 const apiClient = axios.create({
   baseURL: API,
