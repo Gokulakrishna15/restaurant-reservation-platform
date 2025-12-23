@@ -10,24 +10,33 @@ const RestaurantProfile = () => {
   const navigate = useNavigate();
   const [restaurant, setRestaurant] = useState(null);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const token = localStorage.getItem("token");
 
   const fetchRestaurant = useCallback(async () => {
     try {
-      const res = await axios.get(`/restaurants/${id}`);
+      setLoading(true);
+      const res = await axios.get(`/restaurants/${id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       setRestaurant(res.data?.data || res.data);
       setError(null);
     } catch (err) {
       console.error("Error fetching restaurant:", err);
       setError("Failed to load restaurant details.");
+    } finally {
+      setLoading(false);
     }
-  }, [id]);
+  }, [id, token]);
 
   useEffect(() => {
     fetchRestaurant();
   }, [fetchRestaurant]);
 
+  if (loading) return <p className="p-4 text-yellow-300">⌛ Loading...</p>;
   if (error) return <p className="p-4 bg-red-900 text-red-300 border border-red-400 rounded">{error}</p>;
-  if (!restaurant) return <p className="p-4 text-yellow-300">⌛ Loading...</p>;
+  if (!restaurant) return <p className="p-4 text-red-300">Restaurant not found</p>;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-pink-900 px-4 py-8 font-mono text-green-300">
@@ -40,7 +49,7 @@ const RestaurantProfile = () => {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-yellow-300">
           <p><span className="font-semibold">📍 Location:</span> {restaurant.location}</p>
           <p><span className="font-semibold">🍽 Cuisine:</span> {restaurant.cuisine}</p>
-          <p><span className="font-semibold">💲 Price Range:</span> {priceMap[restaurant.priceRange] || restaurant.priceRange}</p>
+          <p><span className="font-semibold">💲 Price:</span> {priceMap[restaurant.priceRange] || restaurant.priceRange}</p>
           {restaurant.features?.length > 0 && (
             <p className="col-span-2 md:col-span-3">
               <span className="font-semibold">✨ Features:</span> {restaurant.features.join(", ")}
@@ -53,43 +62,54 @@ const RestaurantProfile = () => {
       {restaurant.imageUrl && (
         <img
           src={restaurant.imageUrl}
-          alt={`Image of ${restaurant.name}`}
+          alt={restaurant.name}
           className="w-full h-72 object-cover rounded-xl border-4 border-cyan-400 shadow-lg mb-6"
         />
       )}
 
       {/* Details */}
-      <div className="bg-black border-2 border-purple-500 rounded-xl shadow-lg p-6 mb-8 text-cyan-300">
-        <p className="mb-2"><strong>🕒 Hours:</strong> {restaurant.hours}</p>
-        <p className="mb-2"><strong>📞 Contact:</strong> {restaurant.contact}</p>
-        <p className="mb-2"><strong>🥗 Dietary Options:</strong> {restaurant.dietaryOptions?.join(", ") || "None"}</p>
-        <p className="mb-2"><strong>🎶 Ambiance:</strong> {restaurant.ambiance?.join(", ") || "None"}</p>
-      </div>
+      {(restaurant.hours || restaurant.contact) && (
+        <div className="bg-black border-2 border-purple-500 rounded-xl shadow-lg p-6 mb-8 text-cyan-300">
+          {restaurant.hours && <p className="mb-2"><strong>🕒 Hours:</strong> {restaurant.hours}</p>}
+          {restaurant.contact && <p className="mb-2"><strong>📞 Contact:</strong> {restaurant.contact}</p>}
+          {restaurant.dietaryOptions?.length > 0 && (
+            <p className="mb-2"><strong>🥗 Dietary:</strong> {restaurant.dietaryOptions.join(", ")}</p>
+          )}
+          {restaurant.ambiance?.length > 0 && (
+            <p className="mb-2"><strong>🎶 Ambiance:</strong> {restaurant.ambiance.join(", ")}</p>
+          )}
+        </div>
+      )}
 
       {/* Menu */}
-      <div className="bg-black border-2 border-pink-400 rounded-xl shadow-lg p-6 mb-8 text-green-300">
-        <h2 className="text-xl font-bold mb-3 text-pink-400 uppercase">Menu</h2>
-        {restaurant.menu?.length > 0 ? (
+      {restaurant.menu?.length > 0 && (
+        <div className="bg-black border-2 border-pink-400 rounded-xl shadow-lg p-6 mb-8 text-green-300">
+          <h2 className="text-xl font-bold mb-3 text-pink-400 uppercase">Menu</h2>
           <ul className="list-disc pl-5 space-y-1 text-yellow-300">
             {restaurant.menu.map((item, i) => <li key={i}>{item}</li>)}
           </ul>
-        ) : (
-          <p className="text-cyan-300">No menu items available.</p>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Reviews */}
       <div className="bg-black border-2 border-cyan-400 rounded-xl shadow-lg p-6 mb-8 text-green-300">
-        <h2 className="text-xl font-bold mb-3 text-pink-400 uppercase">Reviews</h2>
+        <h2 className="text-xl font-bold mb-3 text-pink-400 uppercase">Reviews ({restaurant.reviews?.length || 0})</h2>
         {restaurant.reviews?.length > 0 ? (
           <div className="space-y-4">
             {restaurant.reviews.map((review) => (
-              <div key={review._id} className="border-2 border-purple-500 rounded-lg p-4 shadow-md hover:shadow-neon transition">
+              <div key={review._id} className="border-2 border-purple-500 rounded-lg p-4 shadow-md">
                 <p className="font-semibold text-yellow-300">{review.user?.name || "Anonymous"}</p>
-                <p className="text-cyan-300">{review.comment}</p>
-                <p className="text-pink-400">⭐ {review.rating}</p>
-                {review.ownerResponse && (
-                  <p className="text-sm text-green-300 mt-1"><strong>Owner:</strong> {review.ownerResponse}</p>
+                <p className="text-pink-400">⭐ {review.rating}/5</p>
+                <p className="text-cyan-300 mt-1">{review.comment}</p>
+                {review.photo && (
+                  <img 
+                    src={review.photo} 
+                    alt="review" 
+                    className="mt-2 h-32 w-32 object-cover rounded"
+                  />
+                )}
+                {review.ownerResponse?.text && (
+                  <p className="text-sm text-green-300 mt-2"><strong>Owner Response:</strong> {review.ownerResponse.text}</p>
                 )}
                 {review.createdAt && (
                   <p className="text-xs text-gray-400 mt-1">
@@ -100,37 +120,34 @@ const RestaurantProfile = () => {
             ))}
           </div>
         ) : (
-          <p className="text-cyan-300">No reviews yet.</p>
+          <p className="text-cyan-300">No reviews yet. Be the first to review!</p>
         )}
       </div>
 
       {/* Reservation Button */}
-      <div className="flex justify-center">
-        <button
-          className="bg-gradient-to-r from-pink-500 to-purple-700 text-white px-6 py-3 rounded-lg font-bold shadow-lg hover:from-pink-600 hover:to-purple-800 transition"
-          onClick={() => navigate(`/reserve/${restaurant._id}`)}
-        >
-          Reserve Now
-        </button>
-      </div>
+      {token ? (
+        <>
+          <div className="flex justify-center mb-8">
+            <button
+              className="bg-gradient-to-r from-pink-500 to-purple-700 text-white px-6 py-3 rounded-lg font-bold shadow-lg hover:from-pink-600 hover:to-purple-800 transition"
+              onClick={() => navigate(`/reserve/${restaurant._id}`)}
+            >
+              Reserve Now
+            </button>
+          </div>
 
-      {/* Review Form */}
-      {restaurant.hasReservation ? (
-        <div className="mt-8">
+          {/* Review Form */}
           <ReviewForm restaurantId={restaurant._id} onReviewSubmitted={fetchRestaurant} />
-        </div>
+        </>
       ) : (
-        <p className="text-red-400 mt-6 text-center">
-          ⚠️ You must reserve before leaving a review.
+        <p className="text-red-400 text-center text-lg mb-8">
+          ⚠️ Please <a href="/login" className="underline hover:text-red-300">login</a> to make reservations and leave reviews.
         </p>
       )}
 
-      {/* Retro Proof Banner */}
-      <div className="text-xs text-yellow-400 text-center mt-8 uppercase tracking-widest">
-      </div>
-
       {/* Footer */}
-      <footer className="text-center text-green-400 text-xs mt-6">
+      <footer className="text-center text-green-400 text-xs mt-8">
+        © 2025 FoodieHub
       </footer>
     </div>
   );

@@ -29,7 +29,7 @@ router.post("/register", async (req, res) => {
       return res.status(409).json({ message: "User already exists" });
     }
 
-    // Create new user (password will be hashed by pre-save hook)
+    // Create new user (password will be hashed by pre-save hook in User model)
     const newUser = new User({
       name,
       email,
@@ -74,7 +74,7 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // Use the matchPassword method from the model
+    // Use the matchPassword method from the User model
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid email or password" });

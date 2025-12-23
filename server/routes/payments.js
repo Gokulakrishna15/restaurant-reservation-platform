@@ -1,71 +1,96 @@
 import express from "express";
-import Stripe from "stripe";
-import dotenv from "dotenv";
+import verifyToken from "../middleware/verifyToken.js";
 import Reservation from "../models/Reservation.js";
+import Stripe from "stripe";
 
-dotenv.config();
 const router = express.Router();
-const stripe = new Stripe(process.env.STRIPE_SECRET);
-const DOMAIN = process.env.FRONTEND_URL || "http://localhost:5173";
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-/**
- * @route   POST /api/payments/create-checkout-session
- * @desc    Create Stripe Checkout Session
- * @access  Private
- */
-router.post("/create-checkout-session", async (req, res) => {
+// ✅ Create Stripe checkout session
+router.post("/create-checkout-session", verifyToken, async (req, res) => {
   try {
     const { reservationId } = req.body;
-    const reservation = await Reservation.findById(reservationId).populate("restaurant");
-    if (!reservation) return res.status(404).json({ message: "Reservation not found" });
 
-    const pricePerGuest = 50000; // ₹500 per guest
-    const totalAmount = pricePerGuest * reservation.numberOfGuests;
+    if (!reservationId) {
+      return res.status(400).json({ error: "Reservation ID required" });
+    }
 
+    const reservation = await Reservation.findById(reservationId).populate(
+      "restaurant user"
+    );
+
+    if (!reservation) {
+      return res.status(404).json({ error: "Reservation not found" });
+    }
+
+    // Create Stripe session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
         {
           price_data: {
             currency: "inr",
-            product_data: { name: `Reservation at ${reservation.restaurant.name}` },
-            unit_amount: totalAmount,
+            product_data: {
+              name: `Reservation at ${reservation.restaurant.name}`,
+              description: `${reservation.numberOfGuests} guests on ${new Date(reservation.date).toLocaleDateString()}`,
+            },
+            unit_amount: 50000, // ₹500 (in paise)
           },
           quantity: 1,
         },
       ],
       mode: "payment",
-      success_url: `${DOMAIN}/success?reservation=${reservationId}`,
-      cancel_url: `${DOMAIN}/cancel`,
+      success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL}/cancel`,
+      metadata: {
+        reservationId: reservationId.toString(),
+      },
     });
 
-    res.json({ url: session.url });
+    res.json({
+      success: true,
+      url: session.url,
+      sessionId: session.id,
+    });
   } catch (err) {
-    console.error("❌ Stripe session error:", err.stack);
-    res.status(500).json({ error: "Stripe session failed", details: err.message });
+    console.error("Payment error:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-/**
- * @route   POST /api/payments/confirm-payment
- * @desc    Mark reservation as paid (frontend callback)
- * @access  Private
- */
-router.post("/confirm-payment", async (req, res) => {
-  try {
-    const { reservationId } = req.body;
-    const reservation = await Reservation.findById(reservationId);
-    if (!reservation) return res.status(404).json({ message: "Reservation not found" });
+// ✅ Webhook to handle payment success
+router.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    const sig = req.headers["stripe-signature"];
 
-    reservation.paymentStatus = "paid";
-    reservation.status = "confirmed";
-    await reservation.save();
+    try {
+      const event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
 
-    res.status(200).json({ message: "Payment confirmed and reservation updated" });
-  } catch (err) {
-    console.error("❌ Payment confirmation error:", err.stack);
-    res.status(500).json({ message: "Failed to confirm payment" });
+      if (event.type === "checkout.session.completed") {
+        const session = event.data.object;
+        const reservationId = session.metadata.reservationId;
+
+        // Update reservation payment status
+        await Reservation.findByIdAndUpdate(reservationId, {
+          paymentStatus: "paid",
+          status: "confirmed",
+        });
+
+        console.log(`✅ Payment confirmed for reservation ${reservationId}`);
+      }
+
+      res.json({ received: true });
+    } catch (err) {
+      console.error("Webhook error:", err);
+      res.status(400).send(`Webhook Error: ${err.message}`);
+    }
   }
-});
+);
 
 export default router;

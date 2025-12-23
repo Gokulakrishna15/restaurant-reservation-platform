@@ -1,40 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import axios from "../services/api";
 
 const ReviewForm = ({ restaurantId, onReviewSubmitted }) => {
-  const [formData, setFormData] = useState({ rating: 0, comment: "" });
-  const [hasReservation, setHasReservation] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({ 
+    rating: 0, 
+    comment: "", 
+    photo: "" 
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  useEffect(() => {
-    const checkReservation = async () => {
-      try {
-        const res = await axios.get("/reservations/my", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
-
-        const match = res.data.find(
-          (r) =>
-            r.restaurant?._id?.toString() === restaurantId.toString() ||
-            r.restaurant?.toString() === restaurantId.toString()
-        );
-        setHasReservation(!!match);
-      } catch (err) {
-        console.error("Error checking reservation:", err);
-        setHasReservation(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkReservation();
-  }, [restaurantId]);
+  const token = localStorage.getItem("token");
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleRatingClick = (val) => {
@@ -47,16 +28,34 @@ const ReviewForm = ({ restaurantId, onReviewSubmitted }) => {
     setError("");
     setSuccess("");
 
+    if (!formData.rating) {
+      setError("Please select a rating");
+      setSubmitting(false);
+      return;
+    }
+
+    if (!formData.comment.trim()) {
+      setError("Please write a comment");
+      setSubmitting(false);
+      return;
+    }
+
     try {
       await axios.post(
         "/reviews",
-        { ...formData, restaurant: restaurantId },
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        { 
+          ...formData, 
+          restaurant: restaurantId 
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setSuccess("✅ Review submitted!");
-      setFormData({ rating: 0, comment: "" });
-      if (onReviewSubmitted) onReviewSubmitted();
+      setSuccess("✅ Review submitted successfully!");
+      setFormData({ rating: 0, comment: "", photo: "" });
+      
+      setTimeout(() => {
+        if (onReviewSubmitted) onReviewSubmitted();
+      }, 1500);
     } catch (err) {
       console.error("Review submission failed:", err);
       setError(err.response?.data?.error || "❌ Failed to submit review.");
@@ -65,63 +64,100 @@ const ReviewForm = ({ restaurantId, onReviewSubmitted }) => {
     }
   };
 
-  if (loading) return <p className="text-sm text-gray-500">Checking reservation status...</p>;
-
-  if (!hasReservation) {
+  if (!token) {
     return (
-      <div className="mt-6 p-4 bg-yellow-100 border border-yellow-400 rounded">
-        <p className="text-sm text-gray-700">
-          ⚠️ You must have a reservation at this restaurant to leave a review.
-        </p>
+      <div className="mt-6 p-4 bg-yellow-900 border-2 border-yellow-500 rounded text-yellow-300 text-sm">
+        ⚠️ Please <a href="/login" className="underline font-bold">login</a> to leave a review.
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-6 p-6 bg-white shadow rounded-xl">
-      <h3 className="text-xl font-bold text-blue-700 mb-4">Leave a Review</h3>
+    <form onSubmit={handleSubmit} className="mt-8 p-6 bg-black border-2 border-cyan-400 rounded-xl">
+      <h3 className="text-xl font-bold text-pink-400 mb-4 uppercase">✍️ Leave a Review</h3>
 
-      {/* Star Rating Selector */}
-      <div className="flex items-center gap-2 mb-4">
-        {[1, 2, 3, 4, 5].map((val) => (
-          <button
-            type="button"
-            key={val}
-            onClick={() => handleRatingClick(val)}
-            className={`text-2xl ${
-              formData.rating >= val ? "text-yellow-400" : "text-gray-300"
-            } hover:text-yellow-500 transition`}
-          >
-            ⭐
-          </button>
-        ))}
-        <span className="text-sm text-gray-600 ml-2">
-          {formData.rating ? `${formData.rating}/5` : "Select rating"}
-        </span>
+      {/* Star Rating */}
+      <div className="mb-5">
+        <label className="block text-cyan-300 mb-2 font-semibold">Rating</label>
+        <div className="flex items-center gap-2">
+          {[1, 2, 3, 4, 5].map((val) => (
+            <button
+              type="button"
+              key={val}
+              onClick={() => handleRatingClick(val)}
+              className={`text-3xl transition ${
+                formData.rating >= val ? "text-yellow-400 scale-110" : "text-gray-600"
+              } hover:text-yellow-300`}
+            >
+              ⭐
+            </button>
+          ))}
+          <span className="text-sm text-cyan-300 ml-4 font-semibold">
+            {formData.rating ? `${formData.rating}/5 stars` : "Select rating"}
+          </span>
+        </div>
       </div>
 
       {/* Comment */}
-      <textarea
-        name="comment"
-        value={formData.comment}
-        onChange={handleChange}
-        placeholder="Share your experience..."
-        className="w-full mb-4 p-3 border rounded-lg focus:ring-2 focus:ring-blue-400"
-        required
-      />
+      <div className="mb-5">
+        <label className="block text-cyan-300 mb-2 font-semibold">Your Review</label>
+        <textarea
+          name="comment"
+          value={formData.comment}
+          onChange={handleChange}
+          placeholder="Share your dining experience... (max 500 characters)"
+          maxLength="500"
+          className="w-full p-3 border-2 border-pink-400 bg-black text-green-300 rounded focus:outline-none focus:ring-2 focus:ring-cyan-400 h-28 resize-none"
+          required
+        />
+        <p className="text-xs text-gray-400 mt-1">
+          {formData.comment.length}/500 characters
+        </p>
+      </div>
+
+      {/* Photo URL (optional) */}
+      <div className="mb-5">
+        <label className="block text-cyan-300 mb-2 font-semibold">Photo URL (Optional)</label>
+        <input
+          type="url"
+          name="photo"
+          value={formData.photo}
+          onChange={handleChange}
+          placeholder="https://example.com/photo.jpg"
+          className="w-full p-3 border-2 border-pink-400 bg-black text-green-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-400"
+        />
+        {formData.photo && (
+          <img 
+            src={formData.photo} 
+            alt="preview" 
+            className="mt-2 h-20 w-20 object-cover rounded border border-pink-400"
+            onError={() => setError("Invalid image URL")}
+          />
+        )}
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="mb-4 bg-red-900 text-red-300 p-3 rounded border border-red-400 text-sm">
+          {error}
+        </div>
+      )}
+
+      {/* Success Message */}
+      {success && (
+        <div className="mb-4 bg-green-900 text-green-300 p-3 rounded border border-green-400 text-sm">
+          {success}
+        </div>
+      )}
 
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={submitting}
-        className="bg-gradient-to-r from-green-500 to-green-700 text-white px-6 py-2 rounded-lg font-semibold shadow hover:from-green-600 hover:to-green-800 transition disabled:opacity-50"
+        disabled={submitting || !formData.rating || !formData.comment.trim()}
+        className="w-full bg-gradient-to-r from-green-500 to-green-700 text-white px-6 py-3 rounded-lg font-bold hover:from-green-600 hover:to-green-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {submitting ? "Submitting..." : "Submit Review"}
+        {submitting ? "⌛ Submitting..." : "Submit Review"}
       </button>
-
-      {/* Feedback */}
-      {error && <p className="text-red-600 mt-3">{error}</p>}
-      {success && <p className="text-green-600 mt-3">{success}</p>}
     </form>
   );
 };

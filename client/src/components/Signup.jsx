@@ -27,12 +27,26 @@ export default function Signup() {
       const res = await registerUser({ name, email, password });
       console.log("✅ Registration successful:", res.data);
 
+      // ✅ Store token
       if (res.data.token) {
         localStorage.setItem("token", res.data.token);
       }
 
-      setSuccess("Registration successful! Redirecting to login...");
-      setTimeout(() => navigate("/login"), 1500);
+      // ✅ Store user data (including role!)
+      if (res.data.user) {
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+      }
+
+      setSuccess("Registration successful! Redirecting...");
+      
+      // ✅ Redirect based on role
+      setTimeout(() => {
+        if (res.data.user?.role === "admin") {
+          navigate("/admin");
+        } else {
+          navigate("/");
+        }
+      }, 1500);
     } catch (err) {
       console.error("❌ Signup error:", err.response?.data || err.message);
       setError(err.response?.data?.message || "Signup failed");

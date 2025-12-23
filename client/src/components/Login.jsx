@@ -6,22 +6,32 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
+    
     try {
       const res = await loginUser({ email, password });
+      
+      // ✅ Store both token and user data
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
+      
+      console.log("✅ Login successful:", res.data.user);
+      
+      // ✅ Redirect based on role
       if (res.data.user.role === "admin") {
         navigate("/admin");
       } else {
         navigate("/");
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Login failed");
+      setError(err.response?.data?.message || "Login failed");
+      console.error("Login error:", err);
     } finally {
       setLoading(false);
     }
@@ -61,6 +71,13 @@ export default function Login() {
             />
           </div>
 
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-900 text-red-300 p-3 rounded border border-red-400 text-sm">
+              ❌ {error}
+            </div>
+          )}
+
           {/* Submit */}
           <button
             type="submit"
@@ -73,7 +90,7 @@ export default function Login() {
 
         {/* Signup Link */}
         <p className="text-sm text-center mt-6 text-cyan-300">
-          Don’t have an account?{" "}
+          Don't have an account?{" "}
           <Link
             to="/signup"
             className="text-pink-400 font-bold hover:underline"
@@ -82,12 +99,9 @@ export default function Login() {
           </Link>
         </p>
 
-        {/* Retro Proof Banner */}
-        <div className="text-xs text-yellow-400 text-center mt-6 uppercase tracking-widest">
-        </div>
-
         {/* Footer */}
         <footer className="text-center text-green-400 text-xs mt-6">
+          © 2025 FoodieHub · Built with ❤️
         </footer>
       </div>
     </div>

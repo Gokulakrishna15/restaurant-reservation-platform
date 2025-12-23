@@ -22,14 +22,14 @@ const AdminDashboard = () => {
 
   const token = localStorage.getItem("token");
 
-  // ✅ Check admin role
+  // ✅ Check admin role - FIXED: Changed /users/me to /auth/me
   useEffect(() => {
     const checkAdmin = async () => {
       try {
-        const res = await axios.get("/users/me", {
+        const res = await axios.get("/auth/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setIsAdmin(res.data.role === "admin");
+        setIsAdmin(res.data.user.role === "admin");
       } catch (err) {
         console.error("Failed to check user role:", err);
         setIsAdmin(false);
@@ -104,6 +104,7 @@ const AdminDashboard = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     navigate("/login");
   };
 

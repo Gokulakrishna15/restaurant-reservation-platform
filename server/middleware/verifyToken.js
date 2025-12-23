@@ -14,12 +14,10 @@ const verifyToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // ✅ Log decoded payload for debugging
-    console.log("Decoded JWT payload:", decoded);
-
+    console.log("✅ Token verified:", decoded);
+    
     // Attach decoded payload to request
-    req.user = decoded; // decoded.id is available
+    req.user = decoded; // decoded.id and decoded.role are available
     next();
   } catch (err) {
     console.error("❌ Token verification failed:", err.message);

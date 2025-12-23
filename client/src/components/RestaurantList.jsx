@@ -1,24 +1,34 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "../services/api";
 import RestaurantCard from "./RestaurantCard";
 
 const RestaurantList = () => {
   const [restaurants, setRestaurants] = useState([]);
-  const [search, setSearch] = useState({ cuisine: "", location: "", features: "" });
+  const [search, setSearch] = useState({ 
+    cuisine: "", 
+    location: "", 
+    features: "" 
+  });
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [noResults, setNoResults] = useState(false);
   const [error, setError] = useState("");
   const [sortBy, setSortBy] = useState("");
 
-  const fetchRestaurants = async () => {
+  const token = localStorage.getItem("token");
+
+  // ✅ Use useCallback to wrap fetchRestaurants
+  const fetchRestaurants = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
-      const res = await axios.get("/restaurants");
-      // ✅ FIX: Backend returns {success: true, data: [...]}
-      const data = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
-      setRestaurants(data);
+      const res = await axios.get("/restaurants", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      
+      // Handle both response formats
+      const data = res.data.data || res.data;
+      setRestaurants(Array.isArray(data) ? data : []);
       setNoResults(data.length === 0);
     } catch (error) {
       console.error("Error fetching restaurants:", error);
@@ -27,10 +37,9 @@ const RestaurantList = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]); // ✅ Added token as dependency
 
   const handleSearch = async () => {
-    // ✅ FIX: If all search fields are empty, just fetch all restaurants
     if (!search.cuisine && !search.location && !search.features) {
       fetchRestaurants();
       return;
@@ -44,10 +53,12 @@ const RestaurantList = () => {
       if (search.location) params.append("location", search.location);
       if (search.features) params.append("features", search.features);
 
-      const res = await axios.get(`/restaurants/search?${params.toString()}`);
-      // ✅ FIX: Backend returns {success: true, data: [...]}
-      const data = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
-      setRestaurants(data);
+      const res = await axios.get(`/restaurants/search?${params.toString()}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      
+      const data = res.data.data || res.data;
+      setRestaurants(Array.isArray(data) ? data : []);
       setNoResults(data.length === 0);
     } catch (err) {
       console.error("Search error:", err);
@@ -68,7 +79,6 @@ const RestaurantList = () => {
     if (e.key === "Enter") handleSearch();
   };
 
-  // ✅ Sorting logic
   const sortedRestaurants = [...restaurants].sort((a, b) => {
     if (sortBy === "price") {
       return (a.priceRange || "").localeCompare(b.priceRange || "");
@@ -77,14 +87,15 @@ const RestaurantList = () => {
       return (a.cuisine || "").localeCompare(b.cuisine || "");
     }
     if (sortBy === "rating") {
-      return (b.rating || 0) - (a.rating || 0);
+      return (b.avgRating || 0) - (a.avgRating || 0);
     }
     return 0;
   });
 
+  // ✅ Now fetchRestaurants is in the dependency array
   useEffect(() => {
     fetchRestaurants();
-  }, []);
+  }, [fetchRestaurants]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-pink-900 p-8 font-mono text-green-300">
@@ -126,11 +137,11 @@ const RestaurantList = () => {
         />
       </div>
 
-      {/* Search & Reset Buttons + Sort Dropdown */}
+      {/* Search & Reset Buttons + Sort */}
       <div className="flex flex-wrap gap-4 mb-8 items-center">
         <button
           onClick={handleSearch}
-          className="bg-gradient-to-r from-pink-500 to-purple-700 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:from-pink-600 hover:to-purple-800 transition"
+          className="bg-gradient-to-r from-pink-500 to-purple-700 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:from-pink-600 hover:to-purple-800 transition disabled:opacity-50"
           disabled={searching}
         >
           {searching ? "⌛ Searching..." : "Search"}
@@ -142,7 +153,6 @@ const RestaurantList = () => {
           Reset
         </button>
 
-        {/* ✅ Sort Dropdown */}
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
@@ -179,9 +189,8 @@ const RestaurantList = () => {
         )}
       </div>
 
-      {/* 🏨 Restaurant Cards */}
+      {/* Restaurant Cards */}
       {loading ? (
-        // Skeleton Loader
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[...Array(4)].map((_, i) => (
             <div
@@ -209,6 +218,11 @@ const RestaurantList = () => {
           ))}
         </div>
       )}
+
+      {/* Footer */}
+      <footer className="text-center text-green-400 text-xs mt-8">
+        © 2025 FoodieHub
+      </footer>
     </div>
   );
 };

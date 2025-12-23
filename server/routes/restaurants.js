@@ -1,60 +1,174 @@
 import express from "express";
 import verifyToken from "../middleware/verifyToken.js";
 import isAdmin from "../middleware/isAdmin.js";
-import {
-  createRestaurant,
-  getAllRestaurants,
-  searchRestaurants,
-  getRestaurantById,
-  getRecommendations,
-  updateRestaurant,
-  deleteRestaurant,
-} from "../controllers/restaurantController.js";
 import Restaurant from "../models/Restaurant.js";
 
 const router = express.Router();
 
-// Admin: Create restaurant
-router.post("/", verifyToken, isAdmin, createRestaurant);
-
-// Public: Get all restaurants
-router.get("/", getAllRestaurants);
-
-// Public: Search restaurants
-router.get("/search", searchRestaurants);
-
-// Private: Recommendations
-router.get("/recommendations/me", verifyToken, getRecommendations);
-
-// Public: Get restaurant by ID
-router.get("/:id", getRestaurantById);
-
-// ✅ NEW: Get slots for a restaurant (optionally filter by date)
-router.get("/:id/slots", async (req, res) => {
+// ✅ Create restaurant (admin only)
+router.post("/", verifyToken, isAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
-    const { date } = req.query;
+    const {
+      name,
+      cuisine,
+      location,
+      priceRange,
+      description,
+      imageUrl,
+      contact,
+      hours,
+      menu,
+      features,
+      dietaryOptions,
+      ambiance,
+    } = req.body;
 
-    const restaurant = await Restaurant.findById(id);
-    if (!restaurant) {
-      return res.status(404).json({ message: "Restaurant not found" });
+    if (!name || !cuisine || !location || !priceRange) {
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
-    let slots = restaurant.slots || [];
-    if (date) {
-      slots = slots.filter((s) => s.date === date);
-    }
+    const newRestaurant = new Restaurant({
+      name,
+      cuisine,
+      location,
+      priceRange,
+      description: description || "",
+      imageUrl,
+      contact,
+      hours,
+      menu: menu || [],
+      features: features || [],
+      dietaryOptions: dietaryOptions || [],
+      ambiance: ambiance || [],
+    });
 
-    res.json(slots);
+    await newRestaurant.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Restaurant created successfully",
+      data: newRestaurant,
+    });
   } catch (err) {
-    res.status(500).json({ message: "Failed to fetch slots", error: err.message });
+    console.error("Restaurant creation error:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Admin: Update restaurant
-router.put("/:id", verifyToken, isAdmin, updateRestaurant);
+// ✅ Get all restaurants (public)
+router.get("/", async (req, res) => {
+  try {
+    const restaurants = await Restaurant.find()
+      .populate("reviews")
+      .lean();
 
-// Admin: Delete restaurant
-router.delete("/:id", verifyToken, isAdmin, deleteRestaurant);
+    res.json({
+      success: true,
+      data: restaurants,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Search restaurants
+router.get("/search", async (req, res) => {
+  try {
+    const { cuisine, location, features } = req.query;
+    const query = {};
+
+    if (cuisine) query.cuisine = { $regex: cuisine, $options: "i" };
+    if (location) query.location = { $regex: location, $options: "i" };
+    if (features) query.features = { $in: [features] };
+
+    const restaurants = await Restaurant.find(query)
+      .populate("reviews");
+
+    res.json({
+      success: true,
+      data: restaurants,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Get restaurant by ID with reviews
+router.get("/:id", async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findById(req.params.id).populate({
+      path: "reviews",
+      populate: { path: "user", select: "name email" },
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: "Restaurant not found" });
+    }
+
+    res.json({
+      success: true,
+      data: restaurant,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Get recommendations (for logged-in users)
+router.get("/recommendations/me", verifyToken, async (req, res) => {
+  try {
+    const recommendations = await Restaurant.find()
+      .limit(5)
+      .lean();
+
+    res.json({
+      success: true,
+      data: recommendations,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Update restaurant (admin only)
+router.put("/:id", verifyToken, isAdmin, async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
+    if (!restaurant) {
+      return res.status(404).json({ error: "Restaurant not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Restaurant updated successfully",
+      data: restaurant,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Delete restaurant (admin only)
+router.delete("/:id", verifyToken, isAdmin, async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findByIdAndDelete(req.params.id);
+
+    if (!restaurant) {
+      return res.status(404).json({ error: "Restaurant not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Restaurant deleted successfully",
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 export default router;
