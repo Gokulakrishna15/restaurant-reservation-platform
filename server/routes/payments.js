@@ -4,7 +4,10 @@ import Reservation from "../models/Reservation.js";
 import Stripe from "stripe";
 
 const router = express.Router();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+// ✅ FIXED: Changed from STRIPE_SECRET_KEY to STRIPE_SECRET
+const stripe = new Stripe(process.env.STRIPE_SECRET);
+
+console.log("✅ Stripe initialized with key:", process.env.STRIPE_SECRET ? "Key found" : "❌ Key missing");
 
 // ✅ Create Stripe checkout session
 router.post("/create-checkout-session", verifyToken, async (req, res) => {
@@ -40,7 +43,8 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
         },
       ],
       mode: "payment",
-      success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+      // ✅ FIXED: Added reservation parameter to success URL
+      success_url: `${process.env.FRONTEND_URL}/success?reservation=${reservationId}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.FRONTEND_URL}/cancel`,
       metadata: {
         reservationId: reservationId.toString(),
@@ -92,5 +96,39 @@ router.post(
     }
   }
 );
+
+// ✅ Manual payment confirmation endpoint (backup)
+router.post("/confirm-payment", verifyToken, async (req, res) => {
+  try {
+    const { reservationId } = req.body;
+
+    if (!reservationId) {
+      return res.status(400).json({ error: "Reservation ID required" });
+    }
+
+    // Update reservation payment status
+    const reservation = await Reservation.findByIdAndUpdate(
+      reservationId,
+      {
+        paymentStatus: "paid",
+        status: "confirmed",
+      },
+      { new: true }
+    );
+
+    if (!reservation) {
+      return res.status(404).json({ error: "Reservation not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Payment confirmed",
+      reservation,
+    });
+  } catch (err) {
+    console.error("Confirm payment error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 export default router;
