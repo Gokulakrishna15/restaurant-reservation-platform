@@ -12,14 +12,6 @@ const defaultImages = [
   "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800"
 ];
 
-// ✅ Helper function to add default images
-const addDefaultImages = (restaurant) => {
-  if (!restaurant.images || restaurant.images.length === 0) {
-    restaurant.images = defaultImages;
-  }
-  return restaurant;
-};
-
 // ✅ Create restaurant (admin only)
 router.post("/", verifyToken, isAdmin, async (req, res) => {
   try {
@@ -72,12 +64,10 @@ router.post("/", verifyToken, isAdmin, async (req, res) => {
   }
 });
 
-// ✅ Get all restaurants (public)
+// ✅ Get all restaurants (public) - FIXED: Removed .populate("reviews")
 router.get("/", async (req, res) => {
   try {
-    const restaurants = await Restaurant.find()
-      .populate("reviews")
-      .lean();
+    const restaurants = await Restaurant.find().lean();
 
     // ✅ Add default images to restaurants that don't have them
     const restaurantsWithImages = restaurants.map(restaurant => {
@@ -97,7 +87,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ✅ Search restaurants
+// ✅ Search restaurants - FIXED: Removed .populate("reviews")
 router.get("/search", async (req, res) => {
   try {
     const { cuisine, location, features } = req.query;
@@ -107,9 +97,7 @@ router.get("/search", async (req, res) => {
     if (location) query.location = { $regex: location, $options: "i" };
     if (features) query.features = { $in: [features] };
 
-    const restaurants = await Restaurant.find(query)
-      .populate("reviews")
-      .lean();
+    const restaurants = await Restaurant.find(query).lean();
 
     // ✅ Add default images
     const restaurantsWithImages = restaurants.map(restaurant => {
@@ -129,15 +117,10 @@ router.get("/search", async (req, res) => {
   }
 });
 
-// ✅ Get restaurant by ID with reviews
+// ✅ Get restaurant by ID - FIXED: Removed .populate("reviews")
 router.get("/:id", async (req, res) => {
   try {
-    const restaurant = await Restaurant.findById(req.params.id)
-      .populate({
-        path: "reviews",
-        populate: { path: "user", select: "name email" },
-      })
-      .lean();
+    const restaurant = await Restaurant.findById(req.params.id).lean();
 
     if (!restaurant) {
       return res.status(404).json({ error: "Restaurant not found" });

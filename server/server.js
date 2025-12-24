@@ -10,6 +10,9 @@ import compression from "compression";
 dotenv.config();
 const app = express();
 
+// ✅ ADD THIS LINE - Trust Render's proxy
+app.set('trust proxy', 1);
+
 // ✅ Validate required environment variables
 ["MONGO_URI", "JWT_SECRET"].forEach((key) => {
   if (!process.env[key]) {
