@@ -20,7 +20,8 @@ const RestaurantDetail = () => {
     const fetchRestaurant = async () => {
       try {
         const response = await axios.get(`/restaurants/${id}`);
-        setRestaurant(response.data);
+        // ✅ FIXED: Access response.data.data instead of response.data
+        setRestaurant(response.data.data || response.data);
         setLoading(false);
       } catch (error) {
         console.error("Error fetching restaurant:", error);
@@ -31,7 +32,8 @@ const RestaurantDetail = () => {
     const fetchReviews = async () => {
       try {
         const response = await axios.get(`/reviews/restaurant/${id}`);
-        setReviews(response.data);
+        // ✅ Handle both response formats
+        setReviews(response.data.data || response.data);
       } catch (error) {
         console.error("Error fetching reviews:", error);
       }
@@ -86,8 +88,9 @@ const RestaurantDetail = () => {
         axios.get(`/restaurants/${id}`),
         axios.get(`/reviews/restaurant/${id}`)
       ]);
-      setRestaurant(restaurantRes.data);
-      setReviews(reviewsRes.data);
+      // ✅ FIXED: Access nested data
+      setRestaurant(restaurantRes.data.data || restaurantRes.data);
+      setReviews(reviewsRes.data.data || reviewsRes.data);
     } catch (error) {
       console.error("Error submitting review:", error);
       alert(error.response?.data?.error || "Failed to submit review");
@@ -118,6 +121,11 @@ const RestaurantDetail = () => {
     );
   }
 
+  // ✅ FIXED: Ensure images array exists with fallback
+  const images = restaurant.images && restaurant.images.length > 0 
+    ? restaurant.images 
+    : ["https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800"];
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Image Gallery */}
@@ -126,22 +134,25 @@ const RestaurantDetail = () => {
           {/* Main Image */}
           <div className="relative h-96 rounded-xl overflow-hidden mb-4">
             <img
-              src={restaurant.images[selectedImage]}
+              src={images[selectedImage]}
               alt={restaurant.name}
               className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.src = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800";
+              }}
             />
             
             {/* Image Navigation Arrows */}
-            {restaurant.images.length > 1 && (
+            {images.length > 1 && (
               <>
                 <button
-                  onClick={() => setSelectedImage((prev) => (prev === 0 ? restaurant.images.length - 1 : prev - 1))}
+                  onClick={() => setSelectedImage((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
                   className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-lg transition"
                 >
                   ←
                 </button>
                 <button
-                  onClick={() => setSelectedImage((prev) => (prev === restaurant.images.length - 1 ? 0 : prev + 1))}
+                  onClick={() => setSelectedImage((prev) => (prev === images.length - 1 ? 0 : prev + 1))}
                   className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-lg transition"
                 >
                   →
@@ -151,13 +162,13 @@ const RestaurantDetail = () => {
 
             {/* Image Counter */}
             <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm">
-              {selectedImage + 1} / {restaurant.images.length}
+              {selectedImage + 1} / {images.length}
             </div>
           </div>
 
           {/* Thumbnail Gallery */}
           <div className="flex gap-2 overflow-x-auto pb-2">
-            {restaurant.images.map((image, index) => (
+            {images.map((image, index) => (
               <button
                 key={index}
                 onClick={() => setSelectedImage(index)}
@@ -171,6 +182,9 @@ const RestaurantDetail = () => {
                   src={image}
                   alt={`${restaurant.name} ${index + 1}`}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.src = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800";
+                  }}
                 />
               </button>
             ))}
@@ -200,7 +214,7 @@ const RestaurantDetail = () => {
                   💲 {restaurant.priceRange}
                 </span>
                 <span className="flex items-center gap-2 text-yellow-600 font-semibold">
-                  ⭐ {restaurant.rating.toFixed(1)} ({restaurant.totalReviews} reviews)
+                  ⭐ {restaurant.rating?.toFixed(1) || "0.0"} ({restaurant.totalReviews || 0} reviews)
                 </span>
               </div>
 
