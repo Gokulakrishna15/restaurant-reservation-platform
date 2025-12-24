@@ -1,33 +1,70 @@
 import mongoose from "mongoose";
 
-const slotSchema = new mongoose.Schema({
-  date: { type: String, required: true },   // YYYY-MM-DD
-  time: { type: String, required: true },   // HH:mm
-  capacity: { type: Number, required: true }
-});
-
 const restaurantSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
-    cuisine: { type: String, required: true },
-    location: { type: String, required: true },
-    priceRange: { type: String, enum: ["low", "medium", "high"], required: true },
-
-    dietaryOptions: [String],   // e.g. vegan, gluten-free
-    ambiance: [String],         // e.g. romantic, casual
-    features: [String],         // e.g. outdoor seating, live music
-
-    imageUrl: { type: String },
-    photos: [String],
-    contact: { type: String },
-    hours: { type: String },
-    menu: [String],
-
-    slots: [slotSchema], // ✅ reservation slots
-    reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: "Review" }]
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    description: {
+      type: String,
+      required: true,
+    },
+    cuisine: {
+      type: String,
+      required: true,
+    },
+    location: {
+      type: String,
+      required: true,
+    },
+    priceRange: {
+      type: String,
+      enum: ["₹", "₹₹", "₹₹₹", "₹₹₹₹"],
+      required: true,
+    },
+    rating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
+    totalReviews: {
+      type: Number,
+      default: 0,
+    },
+    images: {
+      type: [String],
+      default: [
+        "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800",
+        "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800",
+        "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800"
+      ],
+    },
+    availableTimeSlots: {
+      type: [String],
+      default: [
+        "12:00",
+        "13:00",
+        "14:00",
+        "18:00",
+        "19:00",
+        "20:00",
+        "21:00",
+      ],
+    },
+    features: {
+      type: [String],
+      default: [],
+    },
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
   },
   { timestamps: true }
 );
 
-const Restaurant = mongoose.model("Restaurant", restaurantSchema);
-export default Restaurant;
+export default mongoose.model("Restaurant", restaurantSchema);
