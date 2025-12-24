@@ -5,6 +5,21 @@ import Restaurant from "../models/Restaurant.js";
 
 const router = express.Router();
 
+// ✅ Default images for restaurants
+const defaultImages = [
+  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800",
+  "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800",
+  "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800"
+];
+
+// ✅ Helper function to add default images
+const addDefaultImages = (restaurant) => {
+  if (!restaurant.images || restaurant.images.length === 0) {
+    restaurant.images = defaultImages;
+  }
+  return restaurant;
+};
+
 // ✅ Create restaurant (admin only)
 router.post("/", verifyToken, isAdmin, async (req, res) => {
   try {
@@ -15,6 +30,7 @@ router.post("/", verifyToken, isAdmin, async (req, res) => {
       priceRange,
       description,
       imageUrl,
+      images,
       contact,
       hours,
       menu,
@@ -34,6 +50,7 @@ router.post("/", verifyToken, isAdmin, async (req, res) => {
       priceRange,
       description: description || "",
       imageUrl,
+      images: images || defaultImages,
       contact,
       hours,
       menu: menu || [],
@@ -62,11 +79,20 @@ router.get("/", async (req, res) => {
       .populate("reviews")
       .lean();
 
+    // ✅ Add default images to restaurants that don't have them
+    const restaurantsWithImages = restaurants.map(restaurant => {
+      if (!restaurant.images || restaurant.images.length === 0) {
+        restaurant.images = defaultImages;
+      }
+      return restaurant;
+    });
+
     res.json({
       success: true,
-      data: restaurants,
+      data: restaurantsWithImages,
     });
   } catch (err) {
+    console.error("Error fetching restaurants:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -82,13 +108,23 @@ router.get("/search", async (req, res) => {
     if (features) query.features = { $in: [features] };
 
     const restaurants = await Restaurant.find(query)
-      .populate("reviews");
+      .populate("reviews")
+      .lean();
+
+    // ✅ Add default images
+    const restaurantsWithImages = restaurants.map(restaurant => {
+      if (!restaurant.images || restaurant.images.length === 0) {
+        restaurant.images = defaultImages;
+      }
+      return restaurant;
+    });
 
     res.json({
       success: true,
-      data: restaurants,
+      data: restaurantsWithImages,
     });
   } catch (err) {
+    console.error("Error searching restaurants:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -96,13 +132,20 @@ router.get("/search", async (req, res) => {
 // ✅ Get restaurant by ID with reviews
 router.get("/:id", async (req, res) => {
   try {
-    const restaurant = await Restaurant.findById(req.params.id).populate({
-      path: "reviews",
-      populate: { path: "user", select: "name email" },
-    });
+    const restaurant = await Restaurant.findById(req.params.id)
+      .populate({
+        path: "reviews",
+        populate: { path: "user", select: "name email" },
+      })
+      .lean();
 
     if (!restaurant) {
       return res.status(404).json({ error: "Restaurant not found" });
+    }
+
+    // ✅ Add default images if missing
+    if (!restaurant.images || restaurant.images.length === 0) {
+      restaurant.images = defaultImages;
     }
 
     res.json({
@@ -110,6 +153,7 @@ router.get("/:id", async (req, res) => {
       data: restaurant,
     });
   } catch (err) {
+    console.error("Error fetching restaurant:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -121,11 +165,20 @@ router.get("/recommendations/me", verifyToken, async (req, res) => {
       .limit(5)
       .lean();
 
+    // ✅ Add default images
+    const recommendationsWithImages = recommendations.map(restaurant => {
+      if (!restaurant.images || restaurant.images.length === 0) {
+        restaurant.images = defaultImages;
+      }
+      return restaurant;
+    });
+
     res.json({
       success: true,
-      data: recommendations,
+      data: recommendationsWithImages,
     });
   } catch (err) {
+    console.error("Error fetching recommendations:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -149,6 +202,7 @@ router.put("/:id", verifyToken, isAdmin, async (req, res) => {
       data: restaurant,
     });
   } catch (err) {
+    console.error("Error updating restaurant:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -167,6 +221,7 @@ router.delete("/:id", verifyToken, isAdmin, async (req, res) => {
       message: "Restaurant deleted successfully",
     });
   } catch (err) {
+    console.error("Error deleting restaurant:", err);
     res.status(500).json({ error: err.message });
   }
 });
