@@ -9,14 +9,21 @@ const RestaurantCard = ({ restaurant }) => {
       {/* Decorative neon bar */}
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-400"></div>
 
-      {/* Restaurant Image */}
-      {restaurant.image && (
-        <img
-          src={restaurant.image}
-          alt={restaurant.name}
-          className="w-full h-48 object-cover border-b-4 border-cyan-400"
-        />
-      )}
+      {/* Restaurant Image - UPDATED */}
+      <img
+        src={
+          (restaurant.images && restaurant.images[0]) ||
+          restaurant.image ||
+          `https://source.unsplash.com/400x300/?restaurant,${restaurant.cuisine?.toLowerCase().replace(/\s+/g, ',') || 'food'}`
+        }
+        alt={restaurant.name}
+        onError={(e) => {
+          e.target.onerror = null;
+          e.target.src = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=300&fit=crop';
+        }}
+        className="w-full h-48 object-cover border-b-4 border-cyan-400"
+        loading="lazy"
+      />
 
       {/* Content */}
       <div className="p-6">
