@@ -94,7 +94,7 @@ export default function Login() {
         <div className="mt-6 p-4 bg-purple-900 border border-purple-500 rounded text-xs text-yellow-300">
           <p className="font-bold mb-2">🧪 Test Accounts:</p>
           <p>👤 User: test@example.com / password123</p>
-          <p>⚡ Admin: Use createAdmin.js to create admin</p>
+          <p>⚡ Admin: admin@foodiehub.com / admin123</p>
         </div>
 
         <footer className="text-center text-green-400 text-xs mt-6">
