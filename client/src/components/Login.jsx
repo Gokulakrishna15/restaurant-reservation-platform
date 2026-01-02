@@ -93,7 +93,7 @@ export default function Login() {
 
         <div className="mt-6 p-4 bg-purple-900 border border-purple-500 rounded text-xs text-yellow-300">
           <p className="font-bold mb-2">🧪 Test Accounts:</p>
-          <p>👤 User: test@example.com / password123</p>
+          <p>👤 User: guvitestuser@gmail.com / password:guvitestuser</p>
           <p>⚡ Admin: admin@foodiehub.com / admin123</p>
         </div>
 
