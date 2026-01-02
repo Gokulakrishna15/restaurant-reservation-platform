@@ -93,8 +93,8 @@ export default function Login() {
 
         <div className="mt-6 p-4 bg-purple-900 border border-purple-500 rounded text-xs text-yellow-300">
           <p className="font-bold mb-2">🧪 Test Accounts:</p>
-          <p>👤 User: guvitestuser@gmail.com / password:guvitestuser</p>
-          <p>⚡ Admin: admin@foodiehub.com / admin123</p>
+          <p>👤 To Access User: guvitestuser@gmail.com / password:guvitestuser</p>
+          <p>⚡ To Access Admin: admin@foodiehub.com / password:admin123</p>
         </div>
 
         <footer className="text-center text-green-400 text-xs mt-6">
