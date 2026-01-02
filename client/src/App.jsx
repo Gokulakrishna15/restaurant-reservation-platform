@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -7,7 +7,7 @@ import Footer from "./components/Footer";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
 import RestaurantList from "./components/RestaurantList";
-import RestaurantProfile from "./components/RestaurantProfile";
+import RestaurantDetail from "./components/RestaurantDetail";
 import ReservationForm from "./components/ReservationForm";
 import ReservationList from "./components/ReservationList";
 import ImageUpload from "./components/ImageUpload";
@@ -32,26 +32,33 @@ export default function App() {
   return (
     <Router>
       <div className="flex flex-col min-h-screen bg-gray-50">
-        {/* Global Navbar */}
         <Navbar />
 
-        {/* Main Content */}
         <main className="flex-grow">
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<HeroSection />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/restaurants/:id" element={<RestaurantProfile />} />
-            <Route path="/success" element={<PaymentSuccess />} />
-            <Route path="/cancel" element={<PaymentCancel />} />
+            
+            {/* Payment Routes */}
+            <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/payment-cancel" element={<PaymentCancel />} />
 
-            {/* Protected Routes */}
+            {/* User Routes - Protected */}
             <Route
               path="/restaurants"
               element={
                 <PrivateRoute>
                   <RestaurantList />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/restaurants/:id"
+              element={
+                <PrivateRoute>
+                  <RestaurantDetail />
                 </PrivateRoute>
               }
             />
@@ -79,16 +86,8 @@ export default function App() {
                 </PrivateRoute>
               }
             />
-            <Route
-              path="/upload"
-              element={
-                <PrivateRoute role="admin">
-                  <ImageUpload />
-                </PrivateRoute>
-              }
-            />
 
-            {/* Admin Routes */}
+            {/* Admin Routes - Separate from user routes */}
             <Route
               path="/admin"
               element={
@@ -113,13 +112,20 @@ export default function App() {
                 </PrivateRoute>
               }
             />
+            <Route
+              path="/admin/upload"
+              element={
+                <PrivateRoute role="admin">
+                  <ImageUpload />
+                </PrivateRoute>
+              }
+            />
 
-            {/* Catch-all route for 404 */}
+            {/* 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
 
-        {/* Global Footer */}
         <Footer />
       </div>
     </Router>

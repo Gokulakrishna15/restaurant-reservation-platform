@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { loginUser } from "../services/api";
+import axios from "../services/api";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -15,7 +15,7 @@ export default function Login() {
     setError("");
     
     try {
-      const res = await loginUser({ email, password });
+      const res = await axios.post("/auth/login", { email, password });
       
       // ✅ Store both token and user data
       localStorage.setItem("token", res.data.token);
@@ -23,14 +23,14 @@ export default function Login() {
       
       console.log("✅ Login successful:", res.data.user);
       
-      // ✅ Redirect based on role
+      // ✅ FIXED: Proper role-based redirect
       if (res.data.user.role === "admin") {
         navigate("/admin");
       } else {
-        navigate("/");
+        navigate("/restaurants");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      setError(err.response?.data?.error || "Login failed. Please check your credentials.");
       console.error("Login error:", err);
     } finally {
       setLoading(false);
@@ -38,14 +38,13 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-pink-900 flex items-center justify-center font-mono">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-pink-900 flex items-center justify-center font-mono p-4">
       <div className="w-full max-w-md bg-black border-4 border-pink-500 rounded-xl shadow-neon p-8 text-green-300">
         <h2 className="text-2xl font-bold text-center mb-6 text-pink-400 tracking-widest uppercase">
           🍴 FoodieHub Login
         </h2>
 
         <form onSubmit={handleLogin} className="space-y-5">
-          {/* Email */}
           <div>
             <label className="block mb-1 text-cyan-300">Email</label>
             <input
@@ -58,7 +57,6 @@ export default function Login() {
             />
           </div>
 
-          {/* Password */}
           <div>
             <label className="block mb-1 text-cyan-300">Password</label>
             <input
@@ -71,14 +69,12 @@ export default function Login() {
             />
           </div>
 
-          {/* Error Message */}
           {error && (
             <div className="bg-red-900 text-red-300 p-3 rounded border border-red-400 text-sm">
               ❌ {error}
             </div>
           )}
 
-          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
@@ -88,20 +84,21 @@ export default function Login() {
           </button>
         </form>
 
-        {/* Signup Link */}
         <p className="text-sm text-center mt-6 text-cyan-300">
           Don't have an account?{" "}
-          <Link
-            to="/signup"
-            className="text-pink-400 font-bold hover:underline"
-          >
+          <Link to="/signup" className="text-pink-400 font-bold hover:underline">
             Register here
           </Link>
         </p>
 
-        {/* Footer */}
+        <div className="mt-6 p-4 bg-purple-900 border border-purple-500 rounded text-xs text-yellow-300">
+          <p className="font-bold mb-2">🧪 Test Accounts:</p>
+          <p>👤 User: test@example.com / password123</p>
+          <p>⚡ Admin: Use createAdmin.js to create admin</p>
+        </div>
+
         <footer className="text-center text-green-400 text-xs mt-6">
-          © 2025 FoodieHub · Built with ❤️
+          © 2025 FoodieHub · Built with ❤️ by Gokulakrishna
         </footer>
       </div>
     </div>

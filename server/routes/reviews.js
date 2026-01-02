@@ -3,13 +3,14 @@ import verifyToken from "../middleware/verifyToken.js";
 import isAdmin from "../middleware/isAdmin.js";
 import Review from "../models/Review.js";
 import Restaurant from "../models/Restaurant.js";
+import Reservation from "../models/Reservation.js";
 
 const router = express.Router();
 
-// ✅ Create review (user must be logged in)
+// ✅ Create review (ONLY if user has a confirmed reservation)
 router.post("/", verifyToken, async (req, res) => {
   try {
-    const { restaurant, rating, comment, photo } = req.body;
+    const { restaurant, rating, comment, photos } = req.body;
     const userId = req.user.id;
 
     // Validate input
@@ -21,6 +22,19 @@ router.post("/", verifyToken, async (req, res) => {
       return res.status(400).json({ error: "Rating must be between 1 and 5" });
     }
 
+    // ✅ CRITICAL: Check if user has a confirmed/completed reservation at this restaurant
+    const hasReservation = await Reservation.findOne({
+      user: userId,
+      restaurant,
+      status: { $in: ["confirmed", "completed"] },
+    });
+
+    if (!hasReservation) {
+      return res.status(403).json({ 
+        error: "You can only review restaurants where you have a confirmed reservation" 
+      });
+    }
+
     // Check if restaurant exists
     const restaurantDoc = await Restaurant.findById(restaurant);
     if (!restaurantDoc) {
@@ -28,13 +42,11 @@ router.post("/", verifyToken, async (req, res) => {
     }
 
     // Check if user already reviewed this restaurant
-    const existingReview = await Review.findOne({
-      user: userId,
-      restaurant,
-    });
-
+    const existingReview = await Review.findOne({ user: userId, restaurant });
     if (existingReview) {
-      return res.status(409).json({ error: "You already reviewed this restaurant. Edit your existing review instead." });
+      return res.status(409).json({ 
+        error: "You already reviewed this restaurant. Edit your existing review instead." 
+      });
     }
 
     // Create review
@@ -43,20 +55,23 @@ router.post("/", verifyToken, async (req, res) => {
       restaurant,
       rating,
       comment,
-      photo,
+      photos: photos || [],
     });
 
     await newReview.save();
     await newReview.populate("user", "name email");
 
-    // Update restaurant reviews array
-    await Restaurant.findByIdAndUpdate(
-      restaurant,
-      { $push: { reviews: newReview._id } },
-      { new: true }
-    );
+    // Update restaurant rating
+    const allReviews = await Review.find({ restaurant });
+    const avgRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
+    
+    await Restaurant.findByIdAndUpdate(restaurant, {
+      rating: avgRating,
+      totalReviews: allReviews.length,
+    });
 
     res.status(201).json({
+      success: true,
       message: "Review submitted successfully",
       data: newReview,
     });
@@ -102,30 +117,38 @@ router.get("/", verifyToken, isAdmin, async (req, res) => {
 // ✅ Update review (user can only update own)
 router.put("/:id", verifyToken, async (req, res) => {
   try {
-    const { rating, comment, photo } = req.body;
+    const { rating, comment, photos } = req.body;
     const review = await Review.findById(req.params.id);
 
     if (!review) {
       return res.status(404).json({ error: "Review not found" });
     }
 
-    // Check ownership
     if (review.user.toString() !== req.user.id) {
       return res.status(403).json({ error: "Unauthorized - can only edit your own reviews" });
     }
 
-    // Validate rating
     if (rating && (rating < 1 || rating > 5)) {
       return res.status(400).json({ error: "Rating must be between 1 and 5" });
     }
 
     if (rating) review.rating = rating;
     if (comment) review.comment = comment;
-    if (photo) review.photo = photo;
+    if (photos) review.photos = photos;
 
     await review.save();
 
+    // Update restaurant rating
+    const allReviews = await Review.find({ restaurant: review.restaurant });
+    const avgRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
+    
+    await Restaurant.findByIdAndUpdate(review.restaurant, {
+      rating: avgRating,
+      totalReviews: allReviews.length,
+    });
+
     res.json({
+      success: true,
       message: "Review updated successfully",
       data: review,
     });
@@ -143,50 +166,27 @@ router.delete("/:id", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Review not found" });
     }
 
-    // Check ownership or admin
     if (review.user.toString() !== req.user.id && req.user.role !== "admin") {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
-    // Remove from restaurant's reviews array
-    await Restaurant.findByIdAndUpdate(
-      review.restaurant,
-      { $pull: { reviews: review._id } },
-      { new: true }
-    );
-
+    const restaurantId = review.restaurant;
     await Review.findByIdAndDelete(req.params.id);
 
-    res.json({ message: "Review deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+    // Update restaurant rating
+    const allReviews = await Review.find({ restaurant: restaurantId });
+    const avgRating = allReviews.length > 0 
+      ? allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length 
+      : 0;
+    
+    await Restaurant.findByIdAndUpdate(restaurantId, {
+      rating: avgRating,
+      totalReviews: allReviews.length,
+    });
 
-// ✅ Admin responds to review
-router.put("/:id/respond", verifyToken, isAdmin, async (req, res) => {
-  try {
-    const { text } = req.body;
-    const review = await Review.findById(req.params.id);
-
-    if (!review) {
-      return res.status(404).json({ error: "Review not found" });
-    }
-
-    if (!text) {
-      return res.status(400).json({ error: "Response text is required" });
-    }
-
-    review.ownerResponse = {
-      text,
-      respondedAt: new Date(),
-    };
-
-    await review.save();
-
-    res.json({
-      message: "Response added successfully",
-      data: review,
+    res.json({ 
+      success: true,
+      message: "Review deleted successfully" 
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -4,7 +4,6 @@ import Reservation from "../models/Reservation.js";
 import Stripe from "stripe";
 
 const router = express.Router();
-// ✅ FIXED: Changed from STRIPE_SECRET_KEY to STRIPE_SECRET
 const stripe = new Stripe(process.env.STRIPE_SECRET);
 
 console.log("✅ Stripe initialized with key:", process.env.STRIPE_SECRET ? "Key found" : "❌ Key missing");
@@ -18,13 +17,14 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
       return res.status(400).json({ error: "Reservation ID required" });
     }
 
-    const reservation = await Reservation.findById(reservationId).populate(
-      "restaurant user"
-    );
+    const reservation = await Reservation.findById(reservationId).populate("restaurant user");
 
     if (!reservation) {
       return res.status(404).json({ error: "Reservation not found" });
     }
+
+    // Ensure frontend URL is set
+    const frontendUrl = process.env.FRONTEND_URL || "https://eclectic-cucurucho-a9fcf2.netlify.app";
 
     // Create Stripe session
     const session = await stripe.checkout.sessions.create({
@@ -43,9 +43,8 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
         },
       ],
       mode: "payment",
-      // ✅ FIXED: Added reservation parameter to success URL
-      success_url: `${process.env.FRONTEND_URL}/success?reservation=${reservationId}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}/cancel`,
+      success_url: `${frontendUrl}/payment-success?reservation=${reservationId}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${frontendUrl}/payment-cancel`,
       metadata: {
         reservationId: reservationId.toString(),
       },
@@ -63,41 +62,36 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
 });
 
 // ✅ Webhook to handle payment success
-router.post(
-  "/webhook",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
-    const sig = req.headers["stripe-signature"];
+router.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  const sig = req.headers["stripe-signature"];
 
-    try {
-      const event = stripe.webhooks.constructEvent(
-        req.body,
-        sig,
-        process.env.STRIPE_WEBHOOK_SECRET
-      );
+  try {
+    const event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
 
-      if (event.type === "checkout.session.completed") {
-        const session = event.data.object;
-        const reservationId = session.metadata.reservationId;
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+      const reservationId = session.metadata.reservationId;
 
-        // Update reservation payment status
-        await Reservation.findByIdAndUpdate(reservationId, {
-          paymentStatus: "paid",
-          status: "confirmed",
-        });
+      await Reservation.findByIdAndUpdate(reservationId, {
+        paymentStatus: "paid",
+        status: "confirmed",
+      });
 
-        console.log(`✅ Payment confirmed for reservation ${reservationId}`);
-      }
-
-      res.json({ received: true });
-    } catch (err) {
-      console.error("Webhook error:", err);
-      res.status(400).send(`Webhook Error: ${err.message}`);
+      console.log(`✅ Payment confirmed for reservation ${reservationId}`);
     }
-  }
-);
 
-// ✅ Manual payment confirmation endpoint (backup)
+    res.json({ received: true });
+  } catch (err) {
+    console.error("Webhook error:", err);
+    res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+});
+
+// ✅ Manual payment confirmation endpoint
 router.post("/confirm-payment", verifyToken, async (req, res) => {
   try {
     const { reservationId } = req.body;
@@ -106,13 +100,9 @@ router.post("/confirm-payment", verifyToken, async (req, res) => {
       return res.status(400).json({ error: "Reservation ID required" });
     }
 
-    // Update reservation payment status
     const reservation = await Reservation.findByIdAndUpdate(
       reservationId,
-      {
-        paymentStatus: "paid",
-        status: "confirmed",
-      },
+      { paymentStatus: "paid", status: "confirmed" },
       { new: true }
     );
 

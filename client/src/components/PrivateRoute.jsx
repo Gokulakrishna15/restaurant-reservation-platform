@@ -1,17 +1,18 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
 
-export default function PrivateRoute({ children, requiredRole }) {
+export default function PrivateRoute({ children, role }) {
   const token = localStorage.getItem("token");
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   // ✅ If no token, redirect to login
-  if (!token || !user) {
+  if (!token || !user || !user.email) {
     return <Navigate to="/login" replace />;
   }
 
-  // ✅ If a role is required and user doesn't match, redirect
-  if (requiredRole && user.role !== requiredRole) {
+  // ✅ FIXED: Changed requiredRole to role to match App.jsx usage
+  if (role && user.role !== role) {
+    // If user is not admin but trying to access admin route, redirect to home
     return <Navigate to="/" replace />;
   }
 
