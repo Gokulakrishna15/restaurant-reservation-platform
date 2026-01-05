@@ -6,7 +6,7 @@ import Restaurant from "../models/Restaurant.js";
 
 const router = express.Router();
 
-// ✅ Create reservation (with availability check)
+// ✅ Create reservation (with STRICT availability check)
 router.post("/", verifyToken, async (req, res) => {
   try {
     const { restaurant, date, timeSlot, numberOfGuests, specialRequests } = req.body;
@@ -17,22 +17,34 @@ router.post("/", verifyToken, async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    // ✅ Prevent past time bookings
+    const bookingDateTime = new Date(`${date}T${timeSlot}`);
+    const now = new Date();
+    
+    if (bookingDateTime < now) {
+      return res.status(400).json({ 
+        error: "Cannot book a time that has already passed" 
+      });
+    }
+
     // Check if restaurant exists
     const restaurantDoc = await Restaurant.findById(restaurant);
     if (!restaurantDoc) {
       return res.status(404).json({ error: "Restaurant not found" });
     }
 
-    // ✅ Check availability (prevent double bookings)
+    // ✅ CRITICAL: Check for existing reservations at same time
     const existingReservation = await Reservation.findOne({
       restaurant,
       date: new Date(date),
       timeSlot,
-      status: { $ne: "cancelled" },
+      status: { $in: ["pending", "confirmed"] }, // ✅ Check both pending and confirmed
     });
 
     if (existingReservation) {
-      return res.status(409).json({ error: "This time slot is already booked" });
+      return res.status(409).json({ 
+        error: "This time slot is already booked. Please choose a different time." 
+      });
     }
 
     // Create reservation
@@ -44,12 +56,14 @@ router.post("/", verifyToken, async (req, res) => {
       numberOfGuests,
       specialRequests,
       status: "pending",
+      paymentStatus: "unpaid",
     });
 
     await newReservation.save();
     await newReservation.populate("user restaurant");
 
     res.status(201).json({
+      success: true,
       message: "Reservation created successfully",
       data: newReservation,
     });
@@ -110,7 +124,7 @@ router.get("/:id", verifyToken, async (req, res) => {
   }
 });
 
-// ✅ Update reservation
+// ✅ Update reservation (with conflict checking)
 router.put("/:id", verifyToken, async (req, res) => {
   try {
     const { date, timeSlot, numberOfGuests, specialRequests } = req.body;
@@ -126,18 +140,33 @@ router.put("/:id", verifyToken, async (req, res) => {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
-    // Check new time slot availability if changed
-    if (date && timeSlot) {
+    // ✅ Check new time slot availability if date or time changed
+    if (date || timeSlot) {
+      const newDate = date ? new Date(date) : reservation.date;
+      const newTime = timeSlot || reservation.timeSlot;
+
+      // ✅ Prevent past time bookings
+      const bookingDateTime = new Date(`${newDate.toISOString().split('T')[0]}T${newTime}`);
+      const now = new Date();
+      
+      if (bookingDateTime < now) {
+        return res.status(400).json({ 
+          error: "Cannot update to a time that has already passed" 
+        });
+      }
+
       const conflict = await Reservation.findOne({
         _id: { $ne: reservationId },
         restaurant: reservation.restaurant,
-        date: new Date(date),
-        timeSlot,
-        status: { $ne: "cancelled" },
+        date: newDate,
+        timeSlot: newTime,
+        status: { $in: ["pending", "confirmed"] },
       });
 
       if (conflict) {
-        return res.status(409).json({ error: "New time slot is already booked" });
+        return res.status(409).json({ 
+          error: "New time slot is already booked. Please choose a different time." 
+        });
       }
     }
 
@@ -151,6 +180,7 @@ router.put("/:id", verifyToken, async (req, res) => {
     await reservation.populate("user restaurant");
 
     res.json({
+      success: true,
       message: "Reservation updated successfully",
       data: reservation,
     });
@@ -178,6 +208,7 @@ router.delete("/:id", verifyToken, async (req, res) => {
     await reservation.save();
 
     res.json({
+      success: true,
       message: "Reservation cancelled successfully",
       data: reservation,
     });

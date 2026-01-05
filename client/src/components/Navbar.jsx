@@ -11,14 +11,9 @@ const Navbar = () => {
   const isAdmin = user?.role === "admin";
 
   const handleLogout = () => {
-    // Clear localStorage
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-
-    // Close menu
     setMenuOpen(false);
-
-    // Redirect to login
     navigate("/login");
   };
 
@@ -37,50 +32,80 @@ const Navbar = () => {
         <div className="hidden md:flex gap-8 items-center">
           {token && (
             <>
-              <NavLink
-                to="/restaurants"
-                className={({ isActive }) =>
-                  isActive
-                    ? "text-pink-400 font-bold underline"
-                    : "hover:text-cyan-300 transition"
-                }
-              >
-                🍽 Restaurants
-              </NavLink>
+              {/* ✅ Only show for non-admin users */}
+              {!isAdmin && (
+                <>
+                  <NavLink
+                    to="/restaurants"
+                    className={({ isActive }) =>
+                      isActive
+                        ? "text-pink-400 font-bold underline"
+                        : "hover:text-cyan-300 transition"
+                    }
+                  >
+                    🍽 Restaurants
+                  </NavLink>
 
-              <NavLink
-                to="/my-reservations"
-                className={({ isActive }) =>
-                  isActive
-                    ? "text-pink-400 font-bold underline"
-                    : "hover:text-cyan-300 transition"
-                }
-              >
-                📅 Reservations
-              </NavLink>
+                  <NavLink
+                    to="/my-reservations"
+                    className={({ isActive }) =>
+                      isActive
+                        ? "text-pink-400 font-bold underline"
+                        : "hover:text-cyan-300 transition"
+                    }
+                  >
+                    📅 My Reservations
+                  </NavLink>
 
-              <NavLink
-                to="/recommendations"
-                className={({ isActive }) =>
-                  isActive
-                    ? "text-pink-400 font-bold underline"
-                    : "hover:text-cyan-300 transition"
-                }
-              >
-                🎯 Recommendations
-              </NavLink>
+                  <NavLink
+                    to="/recommendations"
+                    className={({ isActive }) =>
+                      isActive
+                        ? "text-pink-400 font-bold underline"
+                        : "hover:text-cyan-300 transition"
+                    }
+                  >
+                    🎯 Recommendations
+                  </NavLink>
+                </>
+              )}
 
+              {/* ✅ Admin-only links */}
               {isAdmin && (
-                <NavLink
-                  to="/admin"
-                  className={({ isActive }) =>
-                    isActive
-                      ? "text-yellow-400 font-bold underline"
-                      : "hover:text-yellow-300 transition"
-                  }
-                >
-                  ⚡ Admin
-                </NavLink>
+                <>
+                  <NavLink
+                    to="/admin"
+                    className={({ isActive }) =>
+                      isActive
+                        ? "text-yellow-400 font-bold underline"
+                        : "hover:text-yellow-300 transition"
+                    }
+                  >
+                    🏪 Manage Restaurants
+                  </NavLink>
+                  
+                  <NavLink
+                    to="/admin/reservations"
+                    className={({ isActive }) =>
+                      isActive
+                        ? "text-yellow-400 font-bold underline"
+                        : "hover:text-yellow-300 transition"
+                    }
+                  >
+                    📅 All Reservations
+                  </NavLink>
+                  
+                  <NavLink
+                    to="/admin/reviews"
+                    className={({ isActive }) =>
+                      isActive
+                        ? "text-yellow-400 font-bold underline"
+                        : "hover:text-yellow-300 transition"
+                    }
+                  >
+                    ⭐ Manage Reviews
+                  </NavLink>
+                </>
               )}
             </>
           )}
@@ -105,6 +130,7 @@ const Navbar = () => {
             <>
               <span className="text-cyan-300">
                 👤 {user?.name || "User"}
+                {isAdmin && <span className="ml-2 text-xs bg-yellow-600 px-2 py-1 rounded">ADMIN</span>}
               </span>
               <button
                 onClick={handleLogout}
@@ -130,35 +156,56 @@ const Navbar = () => {
         <div className="md:hidden bg-black border-t-2 border-pink-500 p-4 space-y-3">
           {token && (
             <>
-              <NavLink
-                to="/restaurants"
-                className="block hover:text-cyan-300 py-2"
-                onClick={() => setMenuOpen(false)}
-              >
-                🍽 Restaurants
-              </NavLink>
-              <NavLink
-                to="/my-reservations"
-                className="block hover:text-cyan-300 py-2"
-                onClick={() => setMenuOpen(false)}
-              >
-                📅 Reservations
-              </NavLink>
-              <NavLink
-                to="/recommendations"
-                className="block hover:text-cyan-300 py-2"
-                onClick={() => setMenuOpen(false)}
-              >
-                🎯 Recommendations
-              </NavLink>
+              {!isAdmin && (
+                <>
+                  <NavLink
+                    to="/restaurants"
+                    className="block hover:text-cyan-300 py-2"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    🍽 Restaurants
+                  </NavLink>
+                  <NavLink
+                    to="/my-reservations"
+                    className="block hover:text-cyan-300 py-2"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    📅 My Reservations
+                  </NavLink>
+                  <NavLink
+                    to="/recommendations"
+                    className="block hover:text-cyan-300 py-2"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    🎯 Recommendations
+                  </NavLink>
+                </>
+              )}
+              
               {isAdmin && (
-                <NavLink
-                  to="/admin"
-                  className="block hover:text-yellow-300 py-2"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  ⚡ Admin
-                </NavLink>
+                <>
+                  <NavLink
+                    to="/admin"
+                    className="block hover:text-yellow-300 py-2"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    🏪 Manage Restaurants
+                  </NavLink>
+                  <NavLink
+                    to="/admin/reservations"
+                    className="block hover:text-yellow-300 py-2"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    📅 All Reservations
+                  </NavLink>
+                  <NavLink
+                    to="/admin/reviews"
+                    className="block hover:text-yellow-300 py-2"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    ⭐ Manage Reviews
+                  </NavLink>
+                </>
               )}
             </>
           )}
@@ -182,7 +229,10 @@ const Navbar = () => {
             </>
           ) : (
             <>
-              <p className="text-cyan-300 py-2">👤 {user?.name || "User"}</p>
+              <p className="text-cyan-300 py-2">
+                👤 {user?.name || "User"}
+                {isAdmin && <span className="ml-2 text-xs bg-yellow-600 px-2 py-1 rounded">ADMIN</span>}
+              </p>
               <button
                 onClick={handleLogout}
                 className="w-full bg-red-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-red-700"

@@ -2,16 +2,41 @@ import React, { useEffect, useState, useCallback } from "react";
 import axios from "../services/api";
 import { useNavigate } from "react-router-dom";
 
-const priceMap = { low: "₹", medium: "₹₹", high: "₹₹₹" };
+// ✅ Predefined cuisine types
+const CUISINE_TYPES = [
+  "Indian",
+  "Chinese",
+  "Italian",
+  "Japanese",
+  "Mexican",
+  "Thai",
+  "American",
+  "Mediterranean",
+  "French",
+  "Korean",
+  "Vietnamese",
+  "Lebanese",
+  "Greek",
+  "Spanish",
+  "Turkish",
+  "Brazilian",
+  "Middle Eastern",
+  "Fusion",
+  "Continental",
+  "Other"
+];
 
 const AdminDashboard = () => {
   const [restaurants, setRestaurants] = useState([]);
   const [form, setForm] = useState({
     name: "",
-    cuisine: "",
+    cuisine: "Indian", // ✅ Default value
     location: "",
-    priceRange: "medium",
+    priceRange: "₹₹",
     description: "",
+    features: "",
+    hours: "",
+    contact: "",
   });
   const [loading, setLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -22,7 +47,7 @@ const AdminDashboard = () => {
 
   const token = localStorage.getItem("token");
 
-  // ✅ Check admin role
+  // Check admin role
   useEffect(() => {
     const checkAdmin = async () => {
       try {
@@ -41,13 +66,12 @@ const AdminDashboard = () => {
     checkAdmin();
   }, [token, navigate]);
 
-  // ✅ FIXED: Proper data structure handling
+  // Fetch restaurants
   const fetchRestaurants = useCallback(async () => {
     try {
       const res = await axios.get("/restaurants", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      // ✅ Handle both response formats
       const data = res.data.data || res.data;
       setRestaurants(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -69,17 +93,29 @@ const AdminDashboard = () => {
     setLoading(true);
     setError("");
     setSuccess("");
+    
     try {
-      await axios.post("/restaurants", form, {
+      // ✅ Convert features string to array
+      const restaurantData = {
+        ...form,
+        features: form.features ? form.features.split(',').map(f => f.trim()) : [],
+      };
+
+      await axios.post("/restaurants", restaurantData, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      
       setForm({
         name: "",
-        cuisine: "",
+        cuisine: "Indian",
         location: "",
-        priceRange: "medium",
+        priceRange: "₹₹",
         description: "",
+        features: "",
+        hours: "",
+        contact: "",
       });
+      
       setSuccess("✅ Restaurant created successfully.");
       setTimeout(() => setSuccess(""), 3000);
       fetchRestaurants();
@@ -175,50 +211,138 @@ const AdminDashboard = () => {
       {/* Create Restaurant Form */}
       <form onSubmit={handleCreate} className="mb-8 p-6 bg-black border-4 border-cyan-400 rounded-xl shadow-lg">
         <h3 className="text-xl font-bold text-yellow-300 mb-4 uppercase">➕ Add New Restaurant</h3>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            placeholder="Restaurant Name"
-            required
-            className="p-3 border-2 border-pink-400 bg-black text-green-300 rounded focus:ring-2 focus:ring-cyan-400 focus:outline-none"
-          />
-          <input
-            name="cuisine"
-            value={form.cuisine}
-            onChange={handleChange}
-            placeholder="Cuisine (e.g. Italian)"
-            required
-            className="p-3 border-2 border-pink-400 bg-black text-green-300 rounded focus:ring-2 focus:ring-purple-400 focus:outline-none"
-          />
-          <input
-            name="location"
-            value={form.location}
-            onChange={handleChange}
-            placeholder="Location (e.g. Mumbai)"
-            required
-            className="p-3 border-2 border-pink-400 bg-black text-green-300 rounded focus:ring-2 focus:ring-yellow-400 focus:outline-none"
-          />
-          <select
-            name="priceRange"
-            value={form.priceRange}
-            onChange={handleChange}
-            className="p-3 border-2 border-pink-400 bg-black text-green-300 rounded focus:outline-none"
-          >
-            <option value="₹">₹ - Budget</option>
-            <option value="₹₹">₹₹ - Moderate</option>
-            <option value="₹₹₹">₹₹₹ - Expensive</option>
-          </select>
+          {/* Restaurant Name */}
+          <div>
+            <label className="block text-cyan-300 mb-2 font-semibold">
+              Restaurant Name <span className="text-red-400">*</span>
+            </label>
+            <input
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              placeholder="e.g., The Golden Spoon"
+              required
+              className="w-full p-3 border-2 border-pink-400 bg-black text-green-300 rounded focus:ring-2 focus:ring-cyan-400 focus:outline-none"
+            />
+          </div>
+
+          {/* ✅ CUISINE DROPDOWN */}
+          <div>
+            <label className="block text-cyan-300 mb-2 font-semibold">
+              Cuisine Type <span className="text-red-400">*</span>
+            </label>
+            <select
+              name="cuisine"
+              value={form.cuisine}
+              onChange={handleChange}
+              required
+              className="w-full p-3 border-2 border-pink-400 bg-black text-green-300 rounded focus:ring-2 focus:ring-purple-400 focus:outline-none"
+            >
+              {CUISINE_TYPES.map((cuisine) => (
+                <option key={cuisine} value={cuisine}>
+                  {cuisine}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Location */}
+          <div>
+            <label className="block text-cyan-300 mb-2 font-semibold">
+              Location <span className="text-red-400">*</span>
+            </label>
+            <input
+              name="location"
+              value={form.location}
+              onChange={handleChange}
+              placeholder="e.g., Mumbai, Chennai"
+              required
+              className="w-full p-3 border-2 border-pink-400 bg-black text-green-300 rounded focus:ring-2 focus:ring-yellow-400 focus:outline-none"
+            />
+          </div>
+
+          {/* Price Range */}
+          <div>
+            <label className="block text-cyan-300 mb-2 font-semibold">
+              Price Range <span className="text-red-400">*</span>
+            </label>
+            <select
+              name="priceRange"
+              value={form.priceRange}
+              onChange={handleChange}
+              required
+              className="w-full p-3 border-2 border-pink-400 bg-black text-green-300 rounded focus:outline-none"
+            >
+              <option value="₹">₹ - Budget Friendly</option>
+              <option value="₹₹">₹₹ - Moderate</option>
+              <option value="₹₹₹">₹₹₹ - Premium</option>
+              <option value="₹₹₹₹">₹₹₹₹ - Fine Dining</option>
+            </select>
+          </div>
+
+          {/* Hours */}
+          <div>
+            <label className="block text-cyan-300 mb-2 font-semibold">
+              Operating Hours
+            </label>
+            <input
+              name="hours"
+              value={form.hours}
+              onChange={handleChange}
+              placeholder="e.g., 9:00 AM - 11:00 PM"
+              className="w-full p-3 border-2 border-pink-400 bg-black text-green-300 rounded focus:ring-2 focus:ring-cyan-400 focus:outline-none"
+            />
+          </div>
+
+          {/* Contact */}
+          <div>
+            <label className="block text-cyan-300 mb-2 font-semibold">
+              Contact Number
+            </label>
+            <input
+              name="contact"
+              value={form.contact}
+              onChange={handleChange}
+              placeholder="e.g., +91 98765 43210"
+              className="w-full p-3 border-2 border-pink-400 bg-black text-green-300 rounded focus:ring-2 focus:ring-purple-400 focus:outline-none"
+            />
+          </div>
         </div>
-        <textarea
-          name="description"
-          value={form.description}
-          onChange={handleChange}
-          placeholder="Description"
-          required
-          className="w-full mt-4 p-3 border-2 border-pink-400 bg-black text-green-300 rounded focus:ring-2 focus:ring-cyan-400 focus:outline-none h-24"
-        />
+
+        {/* Description */}
+        <div className="mt-4">
+          <label className="block text-cyan-300 mb-2 font-semibold">
+            Description <span className="text-red-400">*</span>
+          </label>
+          <textarea
+            name="description"
+            value={form.description}
+            onChange={handleChange}
+            placeholder="Describe the restaurant's ambiance, specialty dishes, and unique features..."
+            required
+            className="w-full p-3 border-2 border-pink-400 bg-black text-green-300 rounded focus:ring-2 focus:ring-cyan-400 focus:outline-none h-24"
+          />
+        </div>
+
+        {/* Features */}
+        <div className="mt-4">
+          <label className="block text-cyan-300 mb-2 font-semibold">
+            Features <span className="text-gray-400 text-sm">(comma-separated)</span>
+          </label>
+          <input
+            name="features"
+            value={form.features}
+            onChange={handleChange}
+            placeholder="e.g., outdoor seating, parking, wifi, live music"
+            className="w-full p-3 border-2 border-pink-400 bg-black text-green-300 rounded focus:ring-2 focus:ring-yellow-400 focus:outline-none"
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            💡 Example: outdoor seating, parking available, wifi, live music, family-friendly
+          </p>
+        </div>
+
         <button
           type="submit"
           disabled={loading}

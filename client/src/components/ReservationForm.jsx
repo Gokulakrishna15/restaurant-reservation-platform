@@ -3,8 +3,12 @@ import axios from "../services/api";
 import { useNavigate } from "react-router-dom";
 
 const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
-  const today = new Date().toISOString().split("T")[0];
   const navigate = useNavigate();
+  
+  // ✅ Get current date and time
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+  const currentTime = now.toTimeString().slice(0, 5); // HH:mm format
 
   const [formData, setFormData] = useState({
     date: today,
@@ -17,6 +21,20 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
   const [error, setError] = useState("");
   const [step, setStep] = useState(1);
   const [showModal, setShowModal] = useState(false);
+  const [minTime, setMinTime] = useState("");
+
+  // ✅ Update minimum time when date changes
+  useEffect(() => {
+    if (formData.date === today) {
+      // If today, minimum time is current time + 1 hour
+      const minHour = now.getHours() + 1;
+      const minMinute = now.getMinutes();
+      setMinTime(`${String(minHour).padStart(2, '0')}:${String(minMinute).padStart(2, '0')}`);
+    } else {
+      // If future date, allow any time
+      setMinTime("00:00");
+    }
+  }, [formData.date, today]);
 
   useEffect(() => {
     if (!restaurantId) {
@@ -29,7 +47,18 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
     setFormData({ ...formData, [name]: value });
   };
 
-  const nextStep = () => setStep((prev) => Math.min(prev + 1, 3));
+  const nextStep = () => {
+    // ✅ Validate time is not in the past
+    if (step === 1) {
+      if (formData.date === today && formData.timeSlot < currentTime) {
+        setError("⚠️ Cannot book a time that has already passed. Please select a future time.");
+        return;
+      }
+    }
+    setError("");
+    setStep((prev) => Math.min(prev + 1, 3));
+  };
+
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
   const handleSubmit = async (e) => {
@@ -43,6 +72,13 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
       return;
     }
 
+    // ✅ Final validation - prevent past time bookings
+    if (formData.date === today && formData.timeSlot <= currentTime) {
+      setError("⚠️ Cannot book a time that has already passed.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -52,7 +88,6 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
 
       console.log("Submitting reservation:", { restaurantId, ...formData });
 
-      // Create Reservation
       const res = await axios.post(
         "/reservations",
         { restaurant: restaurantId, ...formData },
@@ -67,7 +102,6 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
 
       setShowModal(true);
 
-      // Create Stripe Checkout Session
       try {
         const paymentRes = await axios.post(
           "/payments/create-checkout-session",
@@ -128,15 +162,23 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
                 />
               </div>
               <div>
-                <label className="block text-cyan-300 mb-2 font-semibold">Select Time</label>
+                <label className="block text-cyan-300 mb-2 font-semibold">
+                  Select Time {formData.date === today && `(Earliest: ${minTime})`}
+                </label>
                 <input
                   type="time"
                   name="timeSlot"
+                  min={formData.date === today ? minTime : "00:00"}
                   value={formData.timeSlot}
                   onChange={handleChange}
                   required
                   className="w-full border-2 border-pink-400 bg-black text-green-300 p-3 rounded focus:outline-none focus:ring-2 focus:ring-purple-400"
                 />
+                {formData.date === today && (
+                  <p className="text-xs text-yellow-400 mt-2">
+                    ⚠️ For today's bookings, please select a time at least 1 hour from now
+                  </p>
+                )}
               </div>
               <button
                 type="button"
@@ -225,7 +267,7 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
 
         {/* Error Message */}
         {error && (
-          <div className="mt-4 bg-red-900 text-red-300 p-3 rounded border border-red-400 text-sm">
+          <div className="mt-4 bg-red-900 text-red-300 p-3 rounded border border-red-400 text-sm animate-pulse">
             {error}
           </div>
         )}

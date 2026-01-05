@@ -12,7 +12,7 @@ const defaultImages = [
   "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800"
 ];
 
-// ✅ Create restaurant (admin only)
+// ✅ Create restaurant (admin only) - FIXED owner field
 router.post("/", verifyToken, isAdmin, async (req, res) => {
   try {
     const {
@@ -21,34 +21,36 @@ router.post("/", verifyToken, isAdmin, async (req, res) => {
       location,
       priceRange,
       description,
-      imageUrl,
       images,
-      contact,
-      hours,
-      menu,
       features,
+      menu,
+      hours,
+      contact,
       dietaryOptions,
       ambiance,
     } = req.body;
 
     if (!name || !cuisine || !location || !priceRange) {
-      return res.status(400).json({ error: "Missing required fields" });
+      return res.status(400).json({ error: "Missing required fields: name, cuisine, location, priceRange" });
     }
 
+    // ✅ FIX: Automatically set owner to current admin user
     const newRestaurant = new Restaurant({
       name,
       cuisine,
       location,
       priceRange,
-      description: description || "",
-      imageUrl,
-      images: images || defaultImages,
-      contact,
-      hours,
-      menu: menu || [],
+      description: description || "Delicious food and great atmosphere",
+      images: images && images.length > 0 ? images : defaultImages,
       features: features || [],
+      menu: menu || [],
+      hours: hours || "9:00 AM - 10:00 PM",
+      contact: contact || "Contact restaurant for details",
       dietaryOptions: dietaryOptions || [],
       ambiance: ambiance || [],
+      owner: req.user.id, // ✅ Set owner to logged-in admin
+      rating: 0,
+      totalReviews: 0,
     });
 
     await newRestaurant.save();
@@ -64,12 +66,12 @@ router.post("/", verifyToken, isAdmin, async (req, res) => {
   }
 });
 
-// ✅ Get all restaurants (public) - FIXED: Removed .populate("reviews")
+// ✅ Get all restaurants (public)
 router.get("/", async (req, res) => {
   try {
     const restaurants = await Restaurant.find().lean();
 
-    // ✅ Add default images to restaurants that don't have them
+    // Add default images to restaurants that don't have them
     const restaurantsWithImages = restaurants.map(restaurant => {
       if (!restaurant.images || restaurant.images.length === 0) {
         restaurant.images = defaultImages;
@@ -87,19 +89,20 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ✅ Search restaurants - FIXED: Removed .populate("reviews")
+// ✅ Search restaurants
 router.get("/search", async (req, res) => {
   try {
-    const { cuisine, location, features } = req.query;
+    const { cuisine, location, features, priceRange } = req.query;
     const query = {};
 
     if (cuisine) query.cuisine = { $regex: cuisine, $options: "i" };
     if (location) query.location = { $regex: location, $options: "i" };
     if (features) query.features = { $in: [features] };
+    if (priceRange) query.priceRange = priceRange;
 
     const restaurants = await Restaurant.find(query).lean();
 
-    // ✅ Add default images
+    // Add default images
     const restaurantsWithImages = restaurants.map(restaurant => {
       if (!restaurant.images || restaurant.images.length === 0) {
         restaurant.images = defaultImages;
@@ -117,7 +120,7 @@ router.get("/search", async (req, res) => {
   }
 });
 
-// ✅ Get restaurant by ID - FIXED: Removed .populate("reviews")
+// ✅ Get restaurant by ID
 router.get("/:id", async (req, res) => {
   try {
     const restaurant = await Restaurant.findById(req.params.id).lean();
@@ -126,7 +129,7 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ error: "Restaurant not found" });
     }
 
-    // ✅ Add default images if missing
+    // Add default images if missing
     if (!restaurant.images || restaurant.images.length === 0) {
       restaurant.images = defaultImages;
     }
@@ -145,10 +148,11 @@ router.get("/:id", async (req, res) => {
 router.get("/recommendations/me", verifyToken, async (req, res) => {
   try {
     const recommendations = await Restaurant.find()
+      .sort({ rating: -1 }) // Sort by highest rating
       .limit(5)
       .lean();
 
-    // ✅ Add default images
+    // Add default images
     const recommendationsWithImages = recommendations.map(restaurant => {
       if (!restaurant.images || restaurant.images.length === 0) {
         restaurant.images = defaultImages;
@@ -172,7 +176,7 @@ router.put("/:id", verifyToken, isAdmin, async (req, res) => {
     const restaurant = await Restaurant.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     if (!restaurant) {
