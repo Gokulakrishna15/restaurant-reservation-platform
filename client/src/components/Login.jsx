@@ -5,7 +5,7 @@ import axios from "../services/api";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -23,14 +23,16 @@ export default function Login() {
       
       console.log("✅ Login successful:", res.data.user);
       
-      // ✅ FIXED: Proper role-based redirect
+      // ✅ Role-based redirect
       if (res.data.user.role === "admin") {
         navigate("/admin");
+      } else if (res.data.user.role === "restaurant_owner") {
+        navigate("/my-restaurants");
       } else {
         navigate("/restaurants");
       }
     } catch (err) {
-      setError(err.response?.data?.error || "Login failed. Please check your credentials.");
+      setError(err.response?.data?.message || "Login failed. Please check your credentials.");
       console.error("Login error:", err);
     } finally {
       setLoading(false);
@@ -91,10 +93,55 @@ export default function Login() {
           </Link>
         </p>
 
-        <div className="mt-6 p-4 bg-purple-900 border border-purple-500 rounded text-xs text-yellow-300">
-          <p className="font-bold mb-2">🧪 Test Accounts:</p>
-          <p>👤 To Access User: guvitestuser@gmail.com / password:guvitestuser</p>
-          <p>⚡ To Access Admin: admin@foodiehub.com / password:admin123</p>
+        {/* ✅ COMPLETE TEST CREDENTIALS */}
+        <div className="mt-6 space-y-4">
+          {/* Test Accounts */}
+          <div className="p-4 bg-purple-900 border-2 border-purple-500 rounded-lg text-xs">
+            <p className="font-bold mb-3 text-yellow-300 text-center text-sm">
+              🧪 Test Accounts
+            </p>
+            
+            <div className="space-y-3">
+              {/* Admin */}
+              <div className="bg-black p-3 rounded border border-yellow-500">
+                <p className="text-yellow-400 font-bold mb-1">⚡ Admin:</p>
+                <p className="text-cyan-300">📧 admin@foodiehub.com</p>
+                <p className="text-cyan-300">🔑 admin123</p>
+              </div>
+
+              {/* Regular User */}
+              <div className="bg-black p-3 rounded border border-green-500">
+                <p className="text-green-400 font-bold mb-1">👤 Customer:</p>
+                <p className="text-cyan-300">📧 user@test.com</p>
+                <p className="text-cyan-300">🔑 user123</p>
+              </div>
+
+              {/* Restaurant Owner */}
+              <div className="bg-black p-3 rounded border border-pink-500">
+                <p className="text-pink-400 font-bold mb-1">🏪 Restaurant Owner:</p>
+                <p className="text-cyan-300">📧 owner@test.com</p>
+                <p className="text-cyan-300">🔑 owner123</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Test Payment Card */}
+          <div className="p-4 bg-cyan-900 border-2 border-cyan-500 rounded-lg text-xs">
+            <p className="font-bold mb-3 text-yellow-300 text-center text-sm">
+              💳 Test Payment Card (Stripe)
+            </p>
+            
+            <div className="bg-black p-3 rounded space-y-1">
+              <p className="text-green-300"><span className="text-cyan-300 font-bold">Card:</span> 4242 4242 4242 4242</p>
+              <p className="text-green-300"><span className="text-cyan-300 font-bold">Expiry:</span> Any future date (e.g., 12/25)</p>
+              <p className="text-green-300"><span className="text-cyan-300 font-bold">CVC:</span> Any 3 digits (e.g., 123)</p>
+              <p className="text-green-300"><span className="text-cyan-300 font-bold">ZIP:</span> Any 5 digits (e.g., 12345)</p>
+            </div>
+
+            <p className="text-yellow-400 text-center mt-2 text-xs">
+              💡 Use this card for testing reservations
+            </p>
+          </div>
         </div>
 
         <footer className="text-center text-green-400 text-xs mt-6">
