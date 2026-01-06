@@ -15,29 +15,22 @@ async function seedDatabase() {
 
     // Clear old data
     await Promise.all([Restaurant.deleteMany({}), Review.deleteMany({})]);
-    console.log("✅ Cleared old data");
+    console.log("✅ Cleared old restaurant and review data");
 
-    // Create sample user
-    let sampleUser = await User.findOne({ email: "test@example.com" });
+    // ✅ UPDATED: Use standard test user account
+    let sampleUser = await User.findOne({ email: "user@test.com" });
     if (!sampleUser) {
-      const hashedPassword = await bcrypt.hash("password123", 10);
+      const hashedPassword = await bcrypt.hash("user123", 10);
       sampleUser = await User.create({
         name: "Test User",
-        email: "test@example.com",
+        email: "user@test.com",
         password: hashedPassword,
         role: "user",
       });
-      console.log("✅ Created sample user:", sampleUser.email);
+      console.log("✅ Created test user:", sampleUser.email);
+    } else {
+      console.log("✅ Using existing test user:", sampleUser.email);
     }
-
-    // Get today's date and future dates
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const dayAfter = new Date(today);
-    dayAfter.setDate(dayAfter.getDate() + 2);
-
-    const formatDate = (date) => date.toISOString().split('T')[0];
 
     // Insert restaurants with proper images
     const restaurants = await Restaurant.insertMany([
@@ -224,10 +217,12 @@ async function seedDatabase() {
 
     console.log("✅ Seeded reviews");
     console.log("\n🎉 Database seeding completed!");
+    console.log("═══════════════════════════════════════");
     console.log("📊 Summary:");
-    console.log(`   - ${restaurants.length} restaurants`);
-    console.log(`   - ${reviews.length} reviews`);
-    console.log(`   - Test user: test@example.com / password123\n`);
+    console.log(`   • ${restaurants.length} restaurants`);
+    console.log(`   • ${reviews.length} reviews`);
+    console.log(`   • Test user: user@test.com / user123`);
+    console.log("═══════════════════════════════════════\n");
 
     await mongoose.connection.close();
   } catch (err) {

@@ -4,35 +4,66 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const createAdmin = async () => {
+const createTestAccounts = async () => {
   try {
     console.log('🔄 Connecting to MongoDB...');
     await mongoose.connect(process.env.MONGO_URI);
     console.log('✅ Connected to MongoDB');
 
-    // Check if admin already exists
-    const existingAdmin = await User.findOne({ email: 'admin@foodiehub.com' });
-    
-    if (existingAdmin) {
-      console.log('⚠️  Admin already exists!');
-      console.log('📧 Email: admin@foodiehub.com');
-      console.log('🔑 Password: admin123');
-      await mongoose.connection.close();
-      process.exit(0);
+    const testAccounts = [
+      {
+        name: 'Admin User',
+        email: 'admin@foodiehub.com',
+        password: 'admin123',
+        role: 'admin'
+      },
+      {
+        name: 'Test User',
+        email: 'user@test.com',
+        password: 'user123',
+        role: 'user'
+      },
+      {
+        name: 'Restaurant Owner',
+        email: 'owner@test.com',
+        password: 'owner123',
+        role: 'restaurant_owner'
+      }
+    ];
+
+    console.log('\n🎯 Creating test accounts...\n');
+
+    for (const account of testAccounts) {
+      // Check if user already exists
+      const existingUser = await User.findOne({ email: account.email });
+      
+      if (existingUser) {
+        console.log(`⚠️  ${account.role.toUpperCase()} already exists: ${account.email}`);
+      } else {
+        // Create new user (password will be hashed by pre-save hook)
+        await User.create(account);
+        console.log(`✅ ${account.role.toUpperCase()} created: ${account.email}`);
+      }
     }
 
-    // Create new admin
-    const admin = await User.create({
-      name: 'Admin User',
-      email: 'admin@foodiehub.com',
-      password: 'admin123',  // Will be hashed by pre-save hook
-      role: 'admin'
-    });
-
-    console.log('✅ Admin user created successfully!');
-    console.log('📧 Email: admin@foodiehub.com');
-    console.log('🔑 Password: admin123');
-    console.log('\n🎯 Use these credentials to login as admin');
+    console.log('\n📋 TEST ACCOUNTS SUMMARY:');
+    console.log('═══════════════════════════════════════════');
+    console.log('⚡ ADMIN:');
+    console.log('   📧 Email: admin@foodiehub.com');
+    console.log('   🔑 Password: admin123');
+    console.log('   🎯 Access: Manage all restaurants, reservations, reviews');
+    console.log('');
+    console.log('👤 CUSTOMER:');
+    console.log('   📧 Email: user@test.com');
+    console.log('   🔑 Password: user123');
+    console.log('   🎯 Access: Browse, book, review restaurants');
+    console.log('');
+    console.log('🏪 RESTAURANT OWNER:');
+    console.log('   📧 Email: owner@test.com');
+    console.log('   🔑 Password: owner123');
+    console.log('   🎯 Access: Add and manage own restaurants');
+    console.log('═══════════════════════════════════════════');
+    console.log('\n🎉 All test accounts ready!\n');
 
     await mongoose.connection.close();
     process.exit(0);
@@ -43,4 +74,4 @@ const createAdmin = async () => {
   }
 };
 
-createAdmin();
+createTestAccounts();
