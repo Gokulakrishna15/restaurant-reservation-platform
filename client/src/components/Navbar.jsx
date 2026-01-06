@@ -9,6 +9,8 @@ const Navbar = () => {
   const token = localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user?.role === "admin";
+  const isRestaurantOwner = user?.role === "restaurant_owner";
+  const isRegularUser = user?.role === "user";
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -32,8 +34,8 @@ const Navbar = () => {
         <div className="hidden md:flex gap-8 items-center">
           {token && (
             <>
-              {/* ✅ Only show for non-admin users */}
-              {!isAdmin && (
+              {/* ✅ Regular User Links */}
+              {isRegularUser && (
                 <>
                   <NavLink
                     to="/restaurants"
@@ -70,7 +72,34 @@ const Navbar = () => {
                 </>
               )}
 
-              {/* ✅ Admin-only links */}
+              {/* ✅ Restaurant Owner Links */}
+              {isRestaurantOwner && (
+                <>
+                  <NavLink
+                    to="/my-restaurants"
+                    className={({ isActive }) =>
+                      isActive
+                        ? "text-green-400 font-bold underline"
+                        : "hover:text-green-300 transition"
+                    }
+                  >
+                    🏪 My Restaurants
+                  </NavLink>
+                  
+                  <NavLink
+                    to="/restaurants"
+                    className={({ isActive }) =>
+                      isActive
+                        ? "text-pink-400 font-bold underline"
+                        : "hover:text-cyan-300 transition"
+                    }
+                  >
+                    🍽 Browse Restaurants
+                  </NavLink>
+                </>
+              )}
+
+              {/* ✅ Admin Links */}
               {isAdmin && (
                 <>
                   <NavLink
@@ -131,6 +160,7 @@ const Navbar = () => {
               <span className="text-cyan-300">
                 👤 {user?.name || "User"}
                 {isAdmin && <span className="ml-2 text-xs bg-yellow-600 px-2 py-1 rounded">ADMIN</span>}
+                {isRestaurantOwner && <span className="ml-2 text-xs bg-green-600 px-2 py-1 rounded">OWNER</span>}
               </span>
               <button
                 onClick={handleLogout}
@@ -156,7 +186,7 @@ const Navbar = () => {
         <div className="md:hidden bg-black border-t-2 border-pink-500 p-4 space-y-3">
           {token && (
             <>
-              {!isAdmin && (
+              {isRegularUser && (
                 <>
                   <NavLink
                     to="/restaurants"
@@ -178,6 +208,25 @@ const Navbar = () => {
                     onClick={() => setMenuOpen(false)}
                   >
                     🎯 Recommendations
+                  </NavLink>
+                </>
+              )}
+              
+              {isRestaurantOwner && (
+                <>
+                  <NavLink
+                    to="/my-restaurants"
+                    className="block hover:text-green-300 py-2"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    🏪 My Restaurants
+                  </NavLink>
+                  <NavLink
+                    to="/restaurants"
+                    className="block hover:text-cyan-300 py-2"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    🍽 Browse Restaurants
                   </NavLink>
                 </>
               )}
@@ -232,6 +281,7 @@ const Navbar = () => {
               <p className="text-cyan-300 py-2">
                 👤 {user?.name || "User"}
                 {isAdmin && <span className="ml-2 text-xs bg-yellow-600 px-2 py-1 rounded">ADMIN</span>}
+                {isRestaurantOwner && <span className="ml-2 text-xs bg-green-600 px-2 py-1 rounded">OWNER</span>}
               </p>
               <button
                 onClick={handleLogout}

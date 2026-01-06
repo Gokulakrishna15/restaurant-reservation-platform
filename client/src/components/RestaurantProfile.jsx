@@ -3,8 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "../services/api";
 import ReviewForm from "./ReviewForm";
 
-const priceMap = { low: "₹", medium: "₹₹", high: "₹₹₹" };
-
 const RestaurantProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();

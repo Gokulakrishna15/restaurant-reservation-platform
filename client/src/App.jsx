@@ -14,6 +14,7 @@ import ImageUpload from "./components/ImageUpload";
 import AdminDashboard from "./components/AdminDashboard";
 import AdminReservations from "./components/AdminReservations";
 import AdminReviews from "./components/AdminReviews";
+import RestaurantOwnerDashboard from "./components/RestaurantOwnerDashboard";
 import PrivateRoute from "./components/PrivateRoute";
 import Recommendations from "./components/Recommendations";
 import PaymentSuccess from "./components/PaymentSuccess";
@@ -83,6 +84,16 @@ export default function App() {
               element={
                 <PrivateRoute>
                   <ReservationList />
+                </PrivateRoute>
+              }
+            />
+
+            {/* ✅ Restaurant Owner Routes */}
+            <Route
+              path="/my-restaurants"
+              element={
+                <PrivateRoute role="restaurant_owner">
+                  <RestaurantOwnerDashboard />
                 </PrivateRoute>
               }
             />

@@ -1,75 +1,127 @@
 import React, { useState } from "react";
 import axios from "../services/api";
 
-const ImageUpload = ({ restaurantId }) => {
-  const [files, setFiles] = useState([]);
-  const [imageUrls, setImageUrls] = useState([]);
+const ImageUpload = ({ onImageUploaded }) => {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  const handleUpload = async () => {
-    if (files.length === 0) {
-      setError("Please select at least one file.");
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    
+    if (!selectedFile) return;
+
+    // Validate file type
+    if (!selectedFile.type.startsWith("image/")) {
+      setError("Please select an image file (JPG, PNG, etc.)");
       return;
     }
 
-    const formData = new FormData();
-    files.forEach((file) => formData.append("images", file));
+    // Validate file size (max 5MB)
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      setError("Image size must be less than 5MB");
+      return;
+    }
+
+    setFile(selectedFile);
+    setError("");
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreview(reader.result);
+    };
+    reader.readAsDataURL(selectedFile);
+  };
+
+  const handleUpload = async () => {
+    if (!file) {
+      setError("Please select an image first");
+      return;
+    }
+
+    setUploading(true);
+    setError("");
 
     try {
-      setLoading(true);
-      setError("");
-      const res = await axios.post(
-        "/upload/multiple", // ✅ backend route should handle multiple files
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
+      const formData = new FormData();
+      formData.append("image", file);
 
-      const uploadedUrls = res.data.urls; // expect array of URLs
-      setImageUrls(uploadedUrls);
+      const token = localStorage.getItem("token");
+      const res = await axios.post("/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      // ✅ Attach gallery to restaurant
-      await axios.put(
-        `/restaurants/${restaurantId}`,
-        { imageGallery: uploadedUrls },
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-      );
+      // Call parent callback with uploaded image URL
+      if (onImageUploaded && res.data.url) {
+        onImageUploaded(res.data.url);
+      }
 
-      alert("Images uploaded and attached to restaurant!");
+      // Reset form
+      setFile(null);
+      setPreview(null);
+      alert("✅ Image uploaded successfully!");
     } catch (err) {
-      console.error("Upload failed:", err);
-      setError("❌ Failed to upload images.");
+      console.error("Upload error:", err);
+      setError(err.response?.data?.error || "Failed to upload image");
     } finally {
-      setLoading(false);
+      setUploading(false);
     }
   };
 
   return (
-    <div className="p-4 bg-white shadow rounded">
-      <h3 className="text-lg font-bold mb-2">Upload Restaurant Images</h3>
-      <input
-        type="file"
-        multiple
-        onChange={(e) => setFiles(Array.from(e.target.files))}
-        className="mb-2"
-      />
-      <button
-        onClick={handleUpload}
-        disabled={loading}
-        className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 disabled:opacity-50"
-      >
-        {loading ? "Uploading..." : "Upload"}
-      </button>
+    <div className="bg-black border-2 border-cyan-400 rounded-xl p-6">
+      <h3 className="text-xl font-bold text-pink-400 mb-4 uppercase">
+        📸 Upload Restaurant Image
+      </h3>
 
-      {error && <p className="text-red-600 mt-2">{error}</p>}
+      {/* File Input */}
+      <div className="mb-4">
+        <label className="block text-cyan-300 mb-2 font-semibold">
+          Select Image
+        </label>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className="w-full p-2 border-2 border-pink-400 bg-black text-green-300 rounded focus:ring-2 focus:ring-cyan-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-pink-500 file:text-white file:cursor-pointer hover:file:bg-pink-600"
+        />
+        <p className="text-xs text-gray-400 mt-1">
+          Supported: JPG, PNG, WebP (Max 5MB)
+        </p>
+      </div>
 
-      {imageUrls.length > 0 && (
-        <div className="mt-4 grid grid-cols-2 gap-4">
-          {imageUrls.map((url, i) => (
-            <img key={i} src={url} alt={`Uploaded ${i}`} className="rounded" />
-          ))}
+      {/* Preview */}
+      {preview && (
+        <div className="mb-4">
+          <p className="text-cyan-300 mb-2 font-semibold">Preview:</p>
+          <img
+            src={preview}
+            alt="Preview"
+            className="w-full max-w-md h-64 object-cover rounded-lg border-2 border-pink-400"
+          />
         </div>
       )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="mb-4 bg-red-900 text-red-300 p-3 rounded border border-red-400">
+          ❌ {error}
+        </div>
+      )}
+
+      {/* Upload Button */}
+      <button
+        onClick={handleUpload}
+        disabled={!file || uploading}
+        className="w-full bg-gradient-to-r from-green-500 to-green-700 text-white py-3 rounded-lg font-bold hover:from-green-600 hover:to-green-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {uploading ? "⌛ Uploading..." : "Upload Image"}
+      </button>
     </div>
   );
 };

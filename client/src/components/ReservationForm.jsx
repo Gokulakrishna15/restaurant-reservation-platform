@@ -8,7 +8,6 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
   // ✅ Get current date and time
   const now = new Date();
   const today = now.toISOString().split("T")[0];
-  const currentTime = now.toTimeString().slice(0, 5); // HH:mm format
 
   const [formData, setFormData] = useState({
     date: today,
@@ -25,10 +24,11 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
 
   // ✅ Update minimum time when date changes
   useEffect(() => {
+    const currentNow = new Date();
     if (formData.date === today) {
       // If today, minimum time is current time + 1 hour
-      const minHour = now.getHours() + 1;
-      const minMinute = now.getMinutes();
+      const minHour = currentNow.getHours() + 1;
+      const minMinute = currentNow.getMinutes();
       setMinTime(`${String(minHour).padStart(2, '0')}:${String(minMinute).padStart(2, '0')}`);
     } else {
       // If future date, allow any time
@@ -45,13 +45,19 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+    setError(""); // Clear error on change
   };
 
   const nextStep = () => {
     // ✅ Validate time is not in the past
     if (step === 1) {
-      if (formData.date === today && formData.timeSlot < currentTime) {
-        setError("⚠️ Cannot book a time that has already passed. Please select a future time.");
+      if (!formData.date || !formData.timeSlot) {
+        setError("⚠️ Please select both date and time.");
+        return;
+      }
+      
+      if (formData.date === today && formData.timeSlot < minTime) {
+        setError(`⚠️ Cannot book a time that has already passed. Please select a time after ${minTime}.`);
         return;
       }
     }
@@ -73,7 +79,7 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
     }
 
     // ✅ Final validation - prevent past time bookings
-    if (formData.date === today && formData.timeSlot <= currentTime) {
+    if (formData.date === today && formData.timeSlot < minTime) {
       setError("⚠️ Cannot book a time that has already passed.");
       setLoading(false);
       return;
@@ -122,7 +128,8 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
       }
     } catch (err) {
       console.error("Reservation Error:", err);
-      setError(err.response?.data?.error || "❌ Something went wrong.");
+      const errorMsg = err.response?.data?.error || "❌ Something went wrong.";
+      setError(errorMsg);
       setShowModal(false);
     } finally {
       setLoading(false);

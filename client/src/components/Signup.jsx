@@ -6,6 +6,7 @@ export default function Signup() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("user"); // ✅ NEW: Role selection
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -24,7 +25,8 @@ export default function Signup() {
     }
 
     try {
-      const res = await registerUser({ name, email, password });
+      // ✅ UPDATED: Include role in registration
+      const res = await registerUser({ name, email, password, role });
       console.log("✅ Registration successful:", res.data);
 
       // ✅ Store token
@@ -41,10 +43,10 @@ export default function Signup() {
       
       // ✅ Redirect based on role
       setTimeout(() => {
-        if (res.data.user?.role === "admin") {
-          navigate("/admin");
+        if (res.data.user?.role === "restaurant_owner") {
+          navigate("/my-restaurants"); // Restaurant owners see their restaurants
         } else {
-          navigate("/");
+          navigate("/restaurants"); // Regular users see restaurant list
         }
       }, 1500);
     } catch (err) {
@@ -105,6 +107,25 @@ export default function Signup() {
             />
           </div>
 
+          {/* ✅ NEW: Role Selection */}
+          <div>
+            <label htmlFor="role" className="block mb-1 text-cyan-300">Register as</label>
+            <select
+              id="role"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full px-4 py-2 border-2 border-pink-400 bg-black text-green-300 rounded focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            >
+              <option value="user">👤 Customer (Book restaurants)</option>
+              <option value="restaurant_owner">🏪 Restaurant Owner (Add your restaurant)</option>
+            </select>
+            <p className="text-xs text-gray-400 mt-2">
+              {role === "user" 
+                ? "You can browse restaurants, make reservations, and leave reviews" 
+                : "You can add and manage your own restaurant"}
+            </p>
+          </div>
+
           {/* Submit */}
           <button
             type="submit"
@@ -127,12 +148,9 @@ export default function Signup() {
           </Link>
         </p>
 
-        {/* Retro Proof Banner */}
-        <div className="text-xs text-yellow-400 text-center mt-6 uppercase tracking-widest">
-        </div>
-
         {/* Footer */}
         <footer className="text-center text-green-400 text-xs mt-6">
+          © 2025 FoodieHub · Built with ❤️ by Gokulakrishna
         </footer>
       </div>
     </div>

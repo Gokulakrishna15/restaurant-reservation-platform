@@ -1,6 +1,7 @@
 import express from "express";
 import verifyToken from "../middleware/verifyToken.js";
 import isAdmin from "../middleware/isAdmin.js";
+import isRestaurantOwner from "../middleware/isRestaurantOwner.js";
 import Restaurant from "../models/Restaurant.js";
 
 const router = express.Router();
@@ -12,8 +13,16 @@ const defaultImages = [
   "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800"
 ];
 
-// ✅ Create restaurant (admin only) - FIXED owner field
-router.post("/", verifyToken, isAdmin, async (req, res) => {
+// ✅ Predefined cuisine types to prevent spelling errors
+const CUISINE_TYPES = [
+  "Italian", "Chinese", "Indian", "Mexican", "Japanese",
+  "Thai", "French", "American", "Mediterranean", "Korean",
+  "Spanish", "Greek", "Vietnamese", "Lebanese", "Turkish",
+  "Brazilian", "German", "Caribbean", "Moroccan", "Other"
+];
+
+// ✅ Create restaurant (RESTAURANT OWNER only) - FIXED
+router.post("/", verifyToken, isRestaurantOwner, async (req, res) => {
   try {
     const {
       name,
@@ -23,18 +32,23 @@ router.post("/", verifyToken, isAdmin, async (req, res) => {
       description,
       images,
       features,
-      menu,
-      hours,
-      contact,
-      dietaryOptions,
-      ambiance,
+      availableTimeSlots,
     } = req.body;
 
     if (!name || !cuisine || !location || !priceRange) {
-      return res.status(400).json({ error: "Missing required fields: name, cuisine, location, priceRange" });
+      return res.status(400).json({ 
+        error: "Missing required fields: name, cuisine, location, priceRange" 
+      });
     }
 
-    // ✅ FIX: Automatically set owner to current admin user
+    // ✅ Validate cuisine type
+    if (!CUISINE_TYPES.includes(cuisine)) {
+      return res.status(400).json({ 
+        error: `Invalid cuisine type. Must be one of: ${CUISINE_TYPES.join(", ")}` 
+      });
+    }
+
+    // ✅ FIX: Automatically set owner to current restaurant_owner user
     const newRestaurant = new Restaurant({
       name,
       cuisine,
@@ -43,12 +57,10 @@ router.post("/", verifyToken, isAdmin, async (req, res) => {
       description: description || "Delicious food and great atmosphere",
       images: images && images.length > 0 ? images : defaultImages,
       features: features || [],
-      menu: menu || [],
-      hours: hours || "9:00 AM - 10:00 PM",
-      contact: contact || "Contact restaurant for details",
-      dietaryOptions: dietaryOptions || [],
-      ambiance: ambiance || [],
-      owner: req.user.id, // ✅ Set owner to logged-in admin
+      availableTimeSlots: availableTimeSlots || [
+        "12:00", "13:00", "14:00", "18:00", "19:00", "20:00", "21:00"
+      ],
+      owner: req.user.id, // ✅ Set owner to logged-in restaurant owner
       rating: 0,
       totalReviews: 0,
     });
@@ -64,6 +76,14 @@ router.post("/", verifyToken, isAdmin, async (req, res) => {
     console.error("Restaurant creation error:", err);
     res.status(500).json({ error: err.message });
   }
+});
+
+// ✅ Get cuisine types (public) - NEW ENDPOINT
+router.get("/cuisine-types", (req, res) => {
+  res.json({
+    success: true,
+    data: CUISINE_TYPES,
+  });
 });
 
 // ✅ Get all restaurants (public)
@@ -85,6 +105,28 @@ router.get("/", async (req, res) => {
     });
   } catch (err) {
     console.error("Error fetching restaurants:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Get restaurants owned by current user (restaurant owner only)
+router.get("/my-restaurants", verifyToken, isRestaurantOwner, async (req, res) => {
+  try {
+    const restaurants = await Restaurant.find({ owner: req.user.id }).lean();
+
+    const restaurantsWithImages = restaurants.map(restaurant => {
+      if (!restaurant.images || restaurant.images.length === 0) {
+        restaurant.images = defaultImages;
+      }
+      return restaurant;
+    });
+
+    res.json({
+      success: true,
+      data: restaurantsWithImages,
+    });
+  } catch (err) {
+    console.error("Error fetching my restaurants:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -170,23 +212,42 @@ router.get("/recommendations/me", verifyToken, async (req, res) => {
   }
 });
 
-// ✅ Update restaurant (admin only)
-router.put("/:id", verifyToken, isAdmin, async (req, res) => {
+// ✅ Update restaurant (owner or admin)
+router.put("/:id", verifyToken, async (req, res) => {
   try {
-    const restaurant = await Restaurant.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    const restaurant = await Restaurant.findById(req.params.id);
 
     if (!restaurant) {
       return res.status(404).json({ error: "Restaurant not found" });
     }
 
+    // Check if user is owner or admin
+    const isOwner = restaurant.owner.toString() === req.user.id;
+    const isAdmin = req.user.role === "admin";
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ 
+        error: "Unauthorized - only restaurant owner or admin can update" 
+      });
+    }
+
+    // Validate cuisine if being updated
+    if (req.body.cuisine && !CUISINE_TYPES.includes(req.body.cuisine)) {
+      return res.status(400).json({ 
+        error: `Invalid cuisine type. Must be one of: ${CUISINE_TYPES.join(", ")}` 
+      });
+    }
+
+    const updatedRestaurant = await Restaurant.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+
     res.json({
       success: true,
       message: "Restaurant updated successfully",
-      data: restaurant,
+      data: updatedRestaurant,
     });
   } catch (err) {
     console.error("Error updating restaurant:", err);

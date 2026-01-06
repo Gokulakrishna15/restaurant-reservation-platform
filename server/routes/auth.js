@@ -13,14 +13,25 @@ const generateToken = (user) => {
   );
 };
 
-// 🔐 Register route
+// 🔐 Register route - UPDATED with role selection
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
     // Validate input
     if (!name || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // Validate role if provided
+    const validRoles = ['user', 'restaurant_owner', 'admin'];
+    const userRole = role && validRoles.includes(role) ? role : 'user';
+
+    // Prevent direct admin registration (admins should be created via script)
+    if (userRole === 'admin') {
+      return res.status(403).json({ 
+        message: "Admin accounts cannot be created through registration. Contact system administrator." 
+      });
     }
 
     // Check if user exists
@@ -34,7 +45,7 @@ router.post("/register", async (req, res) => {
       name,
       email,
       password, // ✅ Pass plain password, model will hash it
-      role: "user",
+      role: userRole,
     });
 
     await newUser.save();

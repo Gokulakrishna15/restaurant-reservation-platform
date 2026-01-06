@@ -9,10 +9,10 @@ const userSchema = new mongoose.Schema(
 
     password: { type: String, required: true },
 
-    // NEW: role field to separate user vs admin
+    // ✅ UPDATED: Added 'restaurant_owner' role
     role: {
       type: String,
-      enum: ['user', 'admin'],
+      enum: ['user', 'restaurant_owner', 'admin'],
       default: 'user'
     }
   },
