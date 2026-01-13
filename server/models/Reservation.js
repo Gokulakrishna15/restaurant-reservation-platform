@@ -13,18 +13,19 @@ const reservationSchema = new mongoose.Schema(
       required: true,
     },
     date: {
-      type: Date,          // ✅ use Date type instead of String
+      type: Date,
       required: true,
     },
     timeSlot: {
-      type: String,        // HH:mm
+      type: String,
       required: true,
-      match: /^([01]\d|2[0-3]):([0-5]\d)$/, // basic time validation
+      match: /^([01]\d|2[0-3]):([0-5]\d)$/,
     },
     numberOfGuests: {
       type: Number,
       required: true,
       min: 1,
+      max: 20, // ✅ FIXED: Added maximum limit
     },
     specialRequests: {
       type: String,
@@ -32,13 +33,19 @@ const reservationSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "cancelled"],
+      enum: ["pending", "confirmed", "cancelled", "completed"],
       default: "pending",
     },
     paymentStatus: {
       type: String,
       enum: ["unpaid", "paid", "failed"],
       default: "unpaid",
+    },
+    // ✅ ADDED: Total amount field (₹500 per guest)
+    totalAmount: {
+      type: Number,
+      required: true,
+      default: 500,
     },
     reservationCode: {
       type: String,

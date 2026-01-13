@@ -17,6 +17,14 @@ router.post("/", verifyToken, async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    // ✅ FIXED: Validate number of guests (max 20)
+    const guests = parseInt(numberOfGuests);
+    if (isNaN(guests) || guests < 1 || guests > 20) {
+      return res.status(400).json({ 
+        error: "Number of guests must be between 1 and 20" 
+      });
+    }
+
     // ✅ Prevent past time bookings
     const bookingDateTime = new Date(`${date}T${timeSlot}`);
     const now = new Date();
@@ -38,7 +46,7 @@ router.post("/", verifyToken, async (req, res) => {
       restaurant,
       date: new Date(date),
       timeSlot,
-      status: { $in: ["pending", "confirmed"] }, // ✅ Check both pending and confirmed
+      status: { $in: ["pending", "confirmed"] },
     });
 
     if (existingReservation) {
@@ -47,16 +55,20 @@ router.post("/", verifyToken, async (req, res) => {
       });
     }
 
+    // ✅ FIXED: Calculate price based on number of guests (₹500 per person)
+    const totalPrice = guests * 500;
+
     // Create reservation
     const newReservation = new Reservation({
       user: userId,
       restaurant,
       date: new Date(date),
       timeSlot,
-      numberOfGuests,
+      numberOfGuests: guests,
       specialRequests,
       status: "pending",
       paymentStatus: "unpaid",
+      totalAmount: totalPrice, // ✅ Added total amount field
     });
 
     await newReservation.save();
@@ -140,6 +152,16 @@ router.put("/:id", verifyToken, async (req, res) => {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
+    // ✅ FIXED: Validate number of guests if being updated
+    if (numberOfGuests) {
+      const guests = parseInt(numberOfGuests);
+      if (isNaN(guests) || guests < 1 || guests > 20) {
+        return res.status(400).json({ 
+          error: "Number of guests must be between 1 and 20" 
+        });
+      }
+    }
+
     // ✅ Check new time slot availability if date or time changed
     if (date || timeSlot) {
       const newDate = date ? new Date(date) : reservation.date;
@@ -173,7 +195,11 @@ router.put("/:id", verifyToken, async (req, res) => {
     // Update fields
     if (date) reservation.date = new Date(date);
     if (timeSlot) reservation.timeSlot = timeSlot;
-    if (numberOfGuests) reservation.numberOfGuests = numberOfGuests;
+    if (numberOfGuests) {
+      reservation.numberOfGuests = parseInt(numberOfGuests);
+      // ✅ Recalculate total amount
+      reservation.totalAmount = reservation.numberOfGuests * 500;
+    }
     if (specialRequests !== undefined) reservation.specialRequests = specialRequests;
 
     await reservation.save();

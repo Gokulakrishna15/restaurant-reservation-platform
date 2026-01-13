@@ -7,6 +7,33 @@ import Reservation from "../models/Reservation.js";
 
 const router = express.Router();
 
+// ✅ Helper function to recalculate restaurant rating
+const updateRestaurantRating = async (restaurantId) => {
+  const allReviews = await Review.find({ restaurant: restaurantId });
+  
+  if (allReviews.length === 0) {
+    await Restaurant.findByIdAndUpdate(restaurantId, {
+      rating: 0,
+      totalReviews: 0,
+    });
+    return;
+  }
+
+  // ✅ FIXED: Proper average calculation
+  const totalRating = allReviews.reduce((sum, r) => sum + r.rating, 0);
+  const avgRating = totalRating / allReviews.length;
+  
+  console.log(`📊 Rating Update for ${restaurantId}:`);
+  console.log(`   Total reviews: ${allReviews.length}`);
+  console.log(`   Sum of ratings: ${totalRating}`);
+  console.log(`   Average: ${avgRating.toFixed(2)}`);
+  
+  await Restaurant.findByIdAndUpdate(restaurantId, {
+    rating: Math.round(avgRating * 10) / 10, // Round to 1 decimal
+    totalReviews: allReviews.length,
+  });
+};
+
 // ✅ Create review (ONLY if user has a confirmed reservation)
 router.post("/", verifyToken, async (req, res) => {
   try {
@@ -22,7 +49,7 @@ router.post("/", verifyToken, async (req, res) => {
       return res.status(400).json({ error: "Rating must be between 1 and 5" });
     }
 
-    // ✅ CRITICAL: Check if user has a confirmed/completed reservation at this restaurant
+    // ✅ Check if user has a confirmed/completed reservation at this restaurant
     const hasReservation = await Reservation.findOne({
       user: userId,
       restaurant,
@@ -61,14 +88,8 @@ router.post("/", verifyToken, async (req, res) => {
     await newReview.save();
     await newReview.populate("user", "name email");
 
-    // Update restaurant rating
-    const allReviews = await Review.find({ restaurant });
-    const avgRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
-    
-    await Restaurant.findByIdAndUpdate(restaurant, {
-      rating: avgRating,
-      totalReviews: allReviews.length,
-    });
+    // ✅ FIXED: Update restaurant rating with correct calculation
+    await updateRestaurantRating(restaurant);
 
     res.status(201).json({
       success: true,
@@ -138,14 +159,8 @@ router.put("/:id", verifyToken, async (req, res) => {
 
     await review.save();
 
-    // Update restaurant rating
-    const allReviews = await Review.find({ restaurant: review.restaurant });
-    const avgRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
-    
-    await Restaurant.findByIdAndUpdate(review.restaurant, {
-      rating: avgRating,
-      totalReviews: allReviews.length,
-    });
+    // ✅ FIXED: Update restaurant rating with correct calculation
+    await updateRestaurantRating(review.restaurant);
 
     res.json({
       success: true,
@@ -173,16 +188,8 @@ router.delete("/:id", verifyToken, async (req, res) => {
     const restaurantId = review.restaurant;
     await Review.findByIdAndDelete(req.params.id);
 
-    // Update restaurant rating
-    const allReviews = await Review.find({ restaurant: restaurantId });
-    const avgRating = allReviews.length > 0 
-      ? allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length 
-      : 0;
-    
-    await Restaurant.findByIdAndUpdate(restaurantId, {
-      rating: avgRating,
-      totalReviews: allReviews.length,
-    });
+    // ✅ FIXED: Update restaurant rating with correct calculation
+    await updateRestaurantRating(restaurantId);
 
     res.json({ 
       success: true,

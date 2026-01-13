@@ -250,6 +250,7 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
                 <p><strong>📅 Date:</strong> {new Date(formData.date).toLocaleDateString()}</p>
                 <p><strong>🕐 Time:</strong> {formData.timeSlot}</p>
                 <p><strong>👥 Guests:</strong> {formData.numberOfGuests} person{formData.numberOfGuests > 1 ? 's' : ''}</p>
+                <p><strong>💰 Total Amount:</strong> ₹{formData.numberOfGuests * 500} (₹500 per person)</p>
                 {formData.specialRequests && (
                   <p><strong>📝 Special Requests:</strong> {formData.specialRequests}</p>
                 )}
@@ -259,7 +260,7 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
                 disabled={loading}
                 className="w-full bg-gradient-to-r from-pink-500 to-purple-700 text-white py-3 rounded font-bold hover:from-pink-600 hover:to-purple-800 transition disabled:opacity-50"
               >
-                {loading ? "⌛ Processing..." : "Reserve & Pay (₹500)"}
+                {loading ? "⌛ Processing..." : `Reserve & Pay (₹${formData.numberOfGuests * 500})`}
               </button>
               <button 
                 type="button" 
