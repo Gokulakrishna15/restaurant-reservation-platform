@@ -63,8 +63,37 @@ const restaurantSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    // ✅ NEW: Table capacity management
+    totalTables: {
+      type: Number,
+      default: 10, // Default 10 tables per restaurant
+      min: 1,
+    },
+    seatingCapacityPerTable: {
+      type: Number,
+      default: 4, // Default 4 people per table
+      min: 1,
+    },
+    totalSeatingCapacity: {
+      type: Number,
+      default: 40, // Total capacity = tables × seats per table
+      min: 1,
+    },
+    reservationDuration: {
+      type: Number,
+      default: 120, // Default 2 hours (120 minutes) per reservation
+      min: 30,
+    },
   },
   { timestamps: true }
 );
+
+// ✅ Calculate total capacity before saving
+restaurantSchema.pre('save', function(next) {
+  if (this.isModified('totalTables') || this.isModified('seatingCapacityPerTable')) {
+    this.totalSeatingCapacity = this.totalTables * this.seatingCapacityPerTable;
+  }
+  next();
+});
 
 export default mongoose.model("Restaurant", restaurantSchema);
