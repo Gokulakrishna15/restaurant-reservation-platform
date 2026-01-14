@@ -18,7 +18,6 @@ const ReservationList = () => {
       const res = await axios.get("/reservations/my", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
-      // ✅ Handle nested data structure
       const data = res.data.data || res.data;
       setReservations(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -136,10 +135,14 @@ const ReservationList = () => {
                   <input
                     type="number"
                     min="1"
+                    max="20"
                     value={formData.numberOfGuests}
                     onChange={(e) => setFormData({ ...formData, numberOfGuests: e.target.value })}
                     className="w-full p-2 border-2 border-pink-400 bg-black text-green-300 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400"
                   />
+                  <p className="text-yellow-300 text-sm">
+                    💰 New Total: ₹{formData.numberOfGuests * 500}
+                  </p>
                   <div className="flex gap-2">
                     <button
                       onClick={handleUpdate}
@@ -172,6 +175,7 @@ const ReservationList = () => {
                     <p><span className="font-semibold">📅 Date:</span> {new Date(res.date).toLocaleDateString()}</p>
                     <p><span className="font-semibold">⏰ Time:</span> {res.timeSlot}</p>
                     <p><span className="font-semibold">👥 Guests:</span> {res.numberOfGuests}</p>
+                    <p><span className="font-semibold">💰 Amount:</span> ₹{res.totalAmount || (res.numberOfGuests * 500)}</p>
                     <p><span className="font-semibold">📌 Status:</span> 
                       <span className={`ml-2 px-2 py-1 rounded text-xs font-bold ${
                         res.status === 'confirmed' ? 'bg-green-600' : 

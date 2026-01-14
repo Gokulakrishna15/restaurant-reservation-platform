@@ -8,7 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET);
 
 console.log("✅ Stripe initialized with key:", process.env.STRIPE_SECRET ? "Key found" : "❌ Key missing");
 
-// ✅ Create Stripe checkout session
+// ✅ Create Stripe checkout session with DYNAMIC PRICING
 router.post("/create-checkout-session", verifyToken, async (req, res) => {
   try {
     const { reservationId } = req.body;
@@ -23,10 +23,23 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Reservation not found" });
     }
 
+    // ✅ FIXED: Calculate dynamic price based on number of guests
+    const pricePerGuest = 500; // ₹500 per person
+    const totalGuests = reservation.numberOfGuests;
+    const totalAmount = pricePerGuest * totalGuests;
+    const amountInPaise = totalAmount * 100; // Convert to paise for Stripe
+
+    console.log(`💰 Payment Calculation:
+      - Guests: ${totalGuests}
+      - Price per guest: ₹${pricePerGuest}
+      - Total: ₹${totalAmount}
+      - Stripe amount (paise): ${amountInPaise}
+    `);
+
     // Ensure frontend URL is set
     const frontendUrl = process.env.FRONTEND_URL || "https://eclectic-cucurucho-a9fcf2.netlify.app";
 
-    // Create Stripe session
+    // ✅ FIXED: Dynamic pricing in Stripe session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
@@ -35,9 +48,9 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
             currency: "inr",
             product_data: {
               name: `Reservation at ${reservation.restaurant.name}`,
-              description: `${reservation.numberOfGuests} guests on ${new Date(reservation.date).toLocaleDateString()}`,
+              description: `${totalGuests} guest${totalGuests > 1 ? 's' : ''} on ${new Date(reservation.date).toLocaleDateString()} at ${reservation.timeSlot}`,
             },
-            unit_amount: 50000, // ₹500 (in paise)
+            unit_amount: amountInPaise, // ✅ FIXED: Dynamic amount based on guests
           },
           quantity: 1,
         },
@@ -47,6 +60,8 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
       cancel_url: `${frontendUrl}/payment-cancel`,
       metadata: {
         reservationId: reservationId.toString(),
+        numberOfGuests: totalGuests.toString(),
+        totalAmount: totalAmount.toString(),
       },
     });
 
@@ -54,6 +69,7 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
       success: true,
       url: session.url,
       sessionId: session.id,
+      amount: totalAmount,
     });
   } catch (err) {
     console.error("Payment error:", err);
@@ -82,6 +98,8 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
       });
 
       console.log(`✅ Payment confirmed for reservation ${reservationId}`);
+      console.log(`   Amount paid: ₹${session.metadata.totalAmount}`);
+      console.log(`   Guests: ${session.metadata.numberOfGuests}`);
     }
 
     res.json({ received: true });
