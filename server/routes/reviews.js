@@ -200,4 +200,55 @@ router.delete("/:id", verifyToken, async (req, res) => {
   }
 });
 
+// ✅ NEW ROUTE: Owner/Admin responds to reviews
+router.put("/:id/respond", verifyToken, async (req, res) => {
+  try {
+    const { text } = req.body;
+    const review = await Review.findById(req.params.id);
+
+    if (!review) {
+      return res.status(404).json({ error: "Review not found" });
+    }
+
+    // Check if user is admin or restaurant owner
+    const restaurant = await Restaurant.findById(review.restaurant);
+    
+    if (!restaurant) {
+      return res.status(404).json({ error: "Restaurant not found" });
+    }
+
+    const isOwner = restaurant.owner.toString() === req.user.id;
+    const isAdmin = req.user.role === "admin";
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ 
+        error: "Only restaurant owner or admin can respond to reviews" 
+      });
+    }
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: "Response text is required" });
+    }
+
+    // Add owner response
+    review.ownerResponse = {
+      text: text.trim(),
+      respondedAt: new Date(),
+    };
+
+    await review.save();
+    await review.populate("user", "name email");
+    await review.populate("restaurant", "name");
+
+    res.json({
+      success: true,
+      message: "Response added successfully",
+      data: review,
+    });
+  } catch (err) {
+    console.error("Response error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

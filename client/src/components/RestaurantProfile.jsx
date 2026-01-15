@@ -12,6 +12,11 @@ const RestaurantProfile = () => {
   const [loading, setLoading] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
+  
+  // ✅ NEW: Edit review state
+  const [editingReview, setEditingReview] = useState(null);
+  const [editFormData, setEditFormData] = useState({ rating: 0, comment: "", photo: "" });
+  const [updateLoading, setUpdateLoading] = useState(false);
 
   const token = localStorage.getItem("token");
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -48,6 +53,64 @@ const RestaurantProfile = () => {
     fetchReviews();
   }, [fetchRestaurant, fetchReviews]);
 
+  // ✅ NEW: Start editing a review
+  const handleEditReview = (review) => {
+    setEditingReview(review._id);
+    setEditFormData({
+      rating: review.rating,
+      comment: review.comment,
+      photo: review.photos?.[0] || "",
+    });
+  };
+
+  // ✅ NEW: Cancel editing
+  const handleCancelEdit = () => {
+    setEditingReview(null);
+    setEditFormData({ rating: 0, comment: "", photo: "" });
+  };
+
+  // ✅ NEW: Update review
+  const handleUpdateReview = async (reviewId) => {
+    if (!editFormData.rating) {
+      alert("Please select a rating");
+      return;
+    }
+
+    if (!editFormData.comment.trim()) {
+      alert("Please write a comment");
+      return;
+    }
+
+    setUpdateLoading(true);
+    try {
+      await axios.put(
+        `/reviews/${reviewId}`,
+        {
+          rating: editFormData.rating,
+          comment: editFormData.comment,
+          photos: editFormData.photo ? [editFormData.photo] : [],
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      setSuccessMessage("✅ Review updated successfully!");
+      setTimeout(() => setSuccessMessage(""), 3000);
+
+      setEditingReview(null);
+      setEditFormData({ rating: 0, comment: "", photo: "" });
+
+      await fetchReviews();
+      await fetchRestaurant();
+    } catch (err) {
+      console.error("Update review error:", err);
+      alert(err.response?.data?.error || "❌ Failed to update review. Please try again.");
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
+
   // ✅ DELETE REVIEW FUNCTION
   const handleDeleteReview = async (reviewId) => {
     if (!window.confirm("Are you sure you want to delete this review? This action cannot be undone.")) {
@@ -59,11 +122,10 @@ const RestaurantProfile = () => {
       await axios.delete(`/reviews/${reviewId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       setSuccessMessage("✅ Review deleted successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
-      
-      // Refresh both restaurant data and reviews
+
       await fetchReviews();
       await fetchRestaurant();
     } catch (err) {
@@ -167,125 +229,157 @@ const RestaurantProfile = () => {
         </div>
       )}
 
-      {/* Details */}
-      {(restaurant.hours || restaurant.contact || restaurant.dietaryOptions?.length > 0 || restaurant.ambiance?.length > 0) && (
-        <div className="bg-black border-2 border-purple-500 rounded-xl shadow-lg p-6 mb-8 text-cyan-300">
-          <h2 className="text-xl font-bold text-pink-400 mb-4 uppercase">📋 Details</h2>
-          {restaurant.hours && <p className="mb-2"><strong>🕒 Hours:</strong> {restaurant.hours}</p>}
-          {restaurant.contact && <p className="mb-2"><strong>📞 Contact:</strong> {restaurant.contact}</p>}
-          {restaurant.dietaryOptions?.length > 0 && (
-            <p className="mb-2"><strong>🥗 Dietary Options:</strong> {restaurant.dietaryOptions.join(", ")}</p>
-          )}
-          {restaurant.ambiance?.length > 0 && (
-            <p className="mb-2"><strong>🎶 Ambiance:</strong> {restaurant.ambiance.join(", ")}</p>
-          )}
-        </div>
-      )}
-
-      {/* Menu */}
-      {restaurant.menu?.length > 0 && (
-        <div className="bg-black border-2 border-pink-400 rounded-xl shadow-lg p-6 mb-8 text-green-300">
-          <h2 className="text-xl font-bold mb-4 text-pink-400 uppercase">🍽 Menu</h2>
-          <ul className="list-disc pl-5 space-y-1 text-yellow-300">
-            {restaurant.menu.map((item, i) => <li key={i}>{item}</li>)}
-          </ul>
-        </div>
-      )}
-
       {/* Reviews Section */}
       <div className="bg-black border-2 border-cyan-400 rounded-xl shadow-lg p-6 mb-8 text-green-300">
         <h2 className="text-2xl font-bold mb-6 text-pink-400 uppercase">⭐ Customer Reviews ({reviews.length})</h2>
-        
+
         {reviews.length > 0 ? (
           <div className="space-y-6">
             {reviews.map((review) => {
-              // ✅ Check if this review belongs to current user
               const isOwnReview = currentUser?.id === review.user?._id;
-              
+              const isEditing = editingReview === review._id;
+
               return (
-                <div 
-                  key={review._id} 
+                <div
+                  key={review._id}
                   className="border-2 border-purple-500 rounded-lg p-5 shadow-md bg-black hover:border-pink-400 transition"
                 >
-                  {/* Review Header */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <p className="font-semibold text-yellow-300 text-lg">
-                        {review.user?.name || "Anonymous"}
-                        {isOwnReview && (
-                          <span className="ml-2 text-xs bg-cyan-600 text-white px-2 py-1 rounded font-bold">
-                            YOU
-                          </span>
-                        )}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-pink-400 text-xl">
-                          {"⭐".repeat(review.rating)}
-                        </span>
-                        <span className="text-sm text-gray-400">
-                          {review.rating}/5
-                        </span>
+                  {isEditing ? (
+                    // ✅ EDIT MODE
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-bold text-pink-400 mb-3">✏️ Edit Your Review</h3>
+
+                      {/* Star Rating */}
+                      <div>
+                        <label className="block text-cyan-300 mb-2 font-semibold">Rating</label>
+                        <div className="flex gap-2">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setEditFormData({ ...editFormData, rating: star })}
+                              className={`text-3xl transition ${
+                                star <= editFormData.rating ? "text-yellow-400 scale-125" : "text-gray-600"
+                              }`}
+                            >
+                              ⭐
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-sm text-cyan-300 mt-1">
+                          {editFormData.rating}/5 stars
+                        </p>
+                      </div>
+
+                      {/* Comment */}
+                      <div>
+                        <label className="block text-cyan-300 mb-2 font-semibold">Your Review</label>
+                        <textarea
+                          value={editFormData.comment}
+                          onChange={(e) => setEditFormData({ ...editFormData, comment: e.target.value })}
+                          className="w-full p-3 border-2 border-pink-400 bg-black text-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 h-32 resize-none"
+                          maxLength="500"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">
+                          {editFormData.comment.length}/500 characters
+                        </p>
+                      </div>
+
+                      {/* Photo URL */}
+                      <div>
+                        <label className="block text-cyan-300 mb-2 font-semibold">Photo URL (Optional)</label>
+                        <input
+                          type="url"
+                          value={editFormData.photo}
+                          onChange={(e) => setEditFormData({ ...editFormData, photo: e.target.value })}
+                          className="w-full p-3 border-2 border-pink-400 bg-black text-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
+                          placeholder="https://example.com/photo.jpg"
+                        />
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleUpdateReview(review._id)}
+                          disabled={updateLoading}
+                          className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-700 transition disabled:opacity-50"
+                        >
+                          {updateLoading ? "⌛ Saving..." : "✅ Save Changes"}
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          disabled={updateLoading}
+                          className="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-gray-700 transition"
+                        >
+                          ❌ Cancel
+                        </button>
                       </div>
                     </div>
-                    
-                    {/* ✅ DELETE BUTTON - Only show for own reviews */}
-                    {isOwnReview && (
-                      <button
-                        onClick={() => handleDeleteReview(review._id)}
-                        disabled={deleteLoading === review._id}
-                        className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Delete your review"
-                      >
-                        {deleteLoading === review._id ? (
-                          <span className="flex items-center gap-1">
-                            <span className="animate-spin">⌛</span>
-                            Deleting...
-                          </span>
-                        ) : (
-                          <>🗑 Delete</>
+                  ) : (
+                    // ✅ DISPLAY MODE
+                    <>
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <p className="font-semibold text-yellow-300 text-lg">
+                            {review.user?.name || "Anonymous"}
+                            {isOwnReview && (
+                              <span className="ml-2 text-xs bg-cyan-600 text-white px-2 py-1 rounded font-bold">
+                                YOU
+                              </span>
+                            )}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-pink-400 text-xl">
+                              {"⭐".repeat(review.rating)}
+                            </span>
+                            <span className="text-sm text-gray-400">{review.rating}/5</span>
+                          </div>
+                        </div>
+
+                        {/* ✅ EDIT & DELETE BUTTONS - Only for own reviews */}
+                        {isOwnReview && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEditReview(review)}
+                              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition"
+                              title="Edit your review"
+                            >
+                              ✏️ Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteReview(review._id)}
+                              disabled={deleteLoading === review._id}
+                              className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-700 transition disabled:opacity-50"
+                              title="Delete your review"
+                            >
+                              {deleteLoading === review._id ? "⌛" : "🗑 Delete"}
+                            </button>
+                          </div>
                         )}
-                      </button>
-                    )}
-                  </div>
+                      </div>
 
-                  {/* Review Comment */}
-                  <p className="text-cyan-300 mb-3 leading-relaxed">{review.comment}</p>
+                      <p className="text-cyan-300 mb-3 leading-relaxed">{review.comment}</p>
 
-                  {/* Review Photos */}
-                  {review.photos && review.photos.length > 0 && (
-                    <div className="flex gap-2 mb-3 flex-wrap">
-                      {review.photos.map((photo, index) => (
-                        <img
-                          key={index}
-                          src={photo}
-                          alt={`Review photo ${index + 1}`}
-                          className="h-24 w-24 object-cover rounded border-2 border-pink-400 hover:scale-110 transition-transform cursor-pointer"
-                          onClick={() => window.open(photo, "_blank")}
-                        />
-                      ))}
-                    </div>
-                  )}
+                      {review.photos && review.photos.length > 0 && (
+                        <div className="flex gap-2 mb-3 flex-wrap">
+                          {review.photos.map((photo, index) => (
+                            <img
+                              key={index}
+                              src={photo}
+                              alt={`Review photo ${index + 1}`}
+                              className="h-24 w-24 object-cover rounded border-2 border-pink-400 hover:scale-110 transition-transform cursor-pointer"
+                              onClick={() => window.open(photo, "_blank")}
+                            />
+                          ))}
+                        </div>
+                      )}
 
-                  {/* Owner Response */}
-                  {review.ownerResponse?.text && (
-                    <div className="bg-purple-900 border-l-4 border-green-400 rounded p-3 mt-3">
-                      <p className="text-sm font-bold text-green-300 mb-1">
-                        💬 Restaurant Response:
-                      </p>
-                      <p className="text-green-300 text-sm">{review.ownerResponse.text}</p>
-                      {review.ownerResponse.respondedAt && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          Responded on {new Date(review.ownerResponse.respondedAt).toLocaleDateString()}
+                      {review.createdAt && (
+                        <p className="text-xs text-gray-500 mt-3">
+                          Posted on {new Date(review.createdAt).toLocaleDateString()}
                         </p>
                       )}
-                    </div>
-                  )}
-
-                  {/* Review Date */}
-                  {review.createdAt && (
-                    <p className="text-xs text-gray-500 mt-3">
-                      Posted on {new Date(review.createdAt).toLocaleDateString()}
-                    </p>
+                    </>
                   )}
                 </div>
               );
@@ -311,13 +405,12 @@ const RestaurantProfile = () => {
             </button>
           </div>
 
-          {/* Review Form */}
-          <ReviewForm 
-            restaurantId={restaurant._id} 
+          <ReviewForm
+            restaurantId={restaurant._id}
             onReviewSubmitted={() => {
               fetchReviews();
               fetchRestaurant();
-            }} 
+            }}
           />
         </>
       ) : (
@@ -342,7 +435,6 @@ const RestaurantProfile = () => {
         </div>
       )}
 
-      {/* Footer */}
       <footer className="text-center text-green-400 text-xs mt-8 pt-8 border-t border-gray-700">
         © 2025 FoodieHub · Built with ❤️ by Gokulakrishna
       </footer>

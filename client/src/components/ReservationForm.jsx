@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
   const navigate = useNavigate();
   
-  // ✅ Get current date and time
   const now = new Date();
   const today = now.toISOString().split("T")[0];
 
@@ -21,17 +20,17 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
   const [step, setStep] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [minTime, setMinTime] = useState("");
+  const [availability, setAvailability] = useState(null);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   // ✅ Update minimum time when date changes
   useEffect(() => {
     const currentNow = new Date();
     if (formData.date === today) {
-      // If today, minimum time is current time + 1 hour
       const minHour = currentNow.getHours() + 1;
       const minMinute = currentNow.getMinutes();
       setMinTime(`${String(minHour).padStart(2, '0')}:${String(minMinute).padStart(2, '0')}`);
     } else {
-      // If future date, allow any time
       setMinTime("00:00");
     }
   }, [formData.date, today]);
@@ -42,14 +41,35 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
     }
   }, [restaurantId]);
 
+  // ✅ NEW: Check availability when date and time are selected
+  useEffect(() => {
+    const checkAvailability = async () => {
+      if (!formData.date || !formData.timeSlot || !restaurantId) return;
+
+      setCheckingAvailability(true);
+      try {
+        const res = await axios.get(
+          `/reservations/availability/${restaurantId}?date=${formData.date}&timeSlot=${formData.timeSlot}`
+        );
+        setAvailability(res.data.availability);
+      } catch (err) {
+        console.error("Availability check error:", err);
+        setAvailability(null);
+      } finally {
+        setCheckingAvailability(false);
+      }
+    };
+
+    checkAvailability();
+  }, [formData.date, formData.timeSlot, restaurantId]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    setError(""); // Clear error on change
+    setError("");
   };
 
   const nextStep = () => {
-    // ✅ Validate time is not in the past
     if (step === 1) {
       if (!formData.date || !formData.timeSlot) {
         setError("⚠️ Please select both date and time.");
@@ -58,6 +78,12 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
       
       if (formData.date === today && formData.timeSlot < minTime) {
         setError(`⚠️ Cannot book a time that has already passed. Please select a time after ${minTime}.`);
+        return;
+      }
+
+      // ✅ Check if enough capacity
+      if (availability && formData.numberOfGuests > availability.availableSeats) {
+        setError(`⚠️ Not enough seats available. Only ${availability.availableSeats} seats left for this time.`);
         return;
       }
     }
@@ -78,7 +104,6 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
       return;
     }
 
-    // ✅ Final validation - prevent past time bookings
     if (formData.date === today && formData.timeSlot < minTime) {
       setError("⚠️ Cannot book a time that has already passed.");
       setLoading(false);
@@ -91,8 +116,6 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
         navigate("/login");
         return;
       }
-
-      console.log("Submitting reservation:", { restaurantId, ...formData });
 
       const res = await axios.post(
         "/reservations",
@@ -187,10 +210,43 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
                   </p>
                 )}
               </div>
+
+              {/* ✅ NEW: Availability Info */}
+              {formData.date && formData.timeSlot && (
+                <div className="bg-purple-900 p-4 rounded border-2 border-cyan-400">
+                  {checkingAvailability ? (
+                    <p className="text-yellow-300 text-sm">⌛ Checking availability...</p>
+                  ) : availability ? (
+                    <div className="space-y-2 text-sm">
+                      <h3 className="text-pink-400 font-bold">📊 Availability Info:</h3>
+                      <p className="text-green-300">
+                        ✅ <strong>{availability.availableSeats}</strong> seats available
+                      </p>
+                      <p className="text-cyan-300">
+                        🪑 Total Capacity: <strong>{availability.totalCapacity}</strong> seats
+                      </p>
+                      <p className="text-yellow-300">
+                        👥 Already Booked: <strong>{availability.bookedSeats}</strong> seats ({availability.activeReservations} reservations)
+                      </p>
+                      <p className="text-pink-300">
+                        ⏰ Table Duration: <strong>{availability.reservationDuration} minutes</strong>
+                      </p>
+                      {availability.availableSeats === 0 && (
+                        <p className="text-red-400 font-bold mt-2">
+                          ❌ FULLY BOOKED - Please choose a different time
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-gray-400 text-sm">Select date and time to check availability</p>
+                  )}
+                </div>
+              )}
+
               <button
                 type="button"
                 onClick={nextStep}
-                disabled={!formData.date || !formData.timeSlot}
+                disabled={!formData.date || !formData.timeSlot || (availability && availability.availableSeats === 0)}
                 className="w-full bg-pink-500 text-white py-3 rounded font-bold disabled:opacity-50 hover:bg-pink-600 transition"
               >
                 Next ➡️
@@ -207,12 +263,16 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
                   type="number"
                   name="numberOfGuests"
                   min="1"
-                  max="20"
+                  max={availability ? Math.min(20, availability.availableSeats) : 20}
                   value={formData.numberOfGuests}
                   onChange={handleChange}
                   required
                   className="w-full border-2 border-pink-400 bg-black text-green-300 p-3 rounded focus:outline-none focus:ring-2 focus:ring-cyan-400"
                 />
+                <p className="text-xs text-gray-400 mt-2">
+                  Maximum: {availability ? Math.min(20, availability.availableSeats) : 20} guests 
+                  {availability && ` (${availability.availableSeats} seats available)`}
+                </p>
               </div>
               <div>
                 <label className="block text-cyan-300 mb-2 font-semibold">Special Requests (Optional)</label>
@@ -247,14 +307,30 @@ const ReservationForm = ({ restaurantId, onReservationSuccess }) => {
           {step === 3 && (
             <>
               <div className="bg-purple-900 p-4 rounded border border-purple-500 text-sm text-yellow-300 space-y-2">
+                <h3 className="text-pink-400 font-bold text-lg mb-3">📋 Reservation Summary</h3>
                 <p><strong>📅 Date:</strong> {new Date(formData.date).toLocaleDateString()}</p>
                 <p><strong>🕐 Time:</strong> {formData.timeSlot}</p>
                 <p><strong>👥 Guests:</strong> {formData.numberOfGuests} person{formData.numberOfGuests > 1 ? 's' : ''}</p>
                 <p><strong>💰 Total Amount:</strong> ₹{formData.numberOfGuests * 500} (₹500 per person)</p>
+                {availability && (
+                  <p><strong>⏰ Table Reserved For:</strong> {availability.reservationDuration} minutes ({availability.reservationDuration / 60} hours)</p>
+                )}
                 {formData.specialRequests && (
                   <p><strong>📝 Special Requests:</strong> {formData.specialRequests}</p>
                 )}
               </div>
+
+              {/* ✅ Important Notice */}
+              <div className="bg-cyan-900 p-3 rounded border-2 border-cyan-400 text-xs text-cyan-200">
+                <p className="font-bold mb-2">⚠️ Important Information:</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Your table is reserved for {availability?.reservationDuration || 120} minutes</li>
+                  <li>Payment is ₹500 per person</li>
+                  <li>Completed reservations cannot be cancelled</li>
+                  <li>Please arrive on time to honor your reservation</li>
+                </ul>
+              </div>
+
               <button
                 type="submit"
                 disabled={loading}

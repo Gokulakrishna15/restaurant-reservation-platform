@@ -77,35 +77,57 @@ router.post("/create-checkout-session", verifyToken, async (req, res) => {
   }
 });
 
-// ✅ Webhook to handle payment success
+// ✅ ENHANCED: Better webhook signature validation
 router.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   const sig = req.headers["stripe-signature"];
 
+  let event;
   try {
-    const event = stripe.webhooks.constructEvent(
+    // ✅ ADDED: Check if webhook secret exists
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      console.error("❌ STRIPE_WEBHOOK_SECRET not configured");
+      return res.status(500).json({ error: "Webhook not configured" });
+    }
+
+    event = stripe.webhooks.constructEvent(
       req.body,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
+  } catch (err) {
+    console.error("❌ Webhook signature verification failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
 
+  // ✅ Handle the event
+  try {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
       const reservationId = session.metadata.reservationId;
 
-      await Reservation.findByIdAndUpdate(reservationId, {
-        paymentStatus: "paid",
-        status: "confirmed",
-      });
+      const reservation = await Reservation.findByIdAndUpdate(
+        reservationId,
+        {
+          paymentStatus: "paid",
+          status: "confirmed",
+          totalAmount: parseInt(session.metadata.totalAmount), // ✅ Ensure amount is saved
+        },
+        { new: true }
+      );
 
-      console.log(`✅ Payment confirmed for reservation ${reservationId}`);
-      console.log(`   Amount paid: ₹${session.metadata.totalAmount}`);
-      console.log(`   Guests: ${session.metadata.numberOfGuests}`);
+      if (reservation) {
+        console.log(`✅ Payment confirmed for reservation ${reservationId}`);
+        console.log(`   Amount paid: ₹${session.metadata.totalAmount}`);
+        console.log(`   Guests: ${session.metadata.numberOfGuests}`);
+      } else {
+        console.error(`❌ Reservation ${reservationId} not found`);
+      }
     }
 
     res.json({ received: true });
   } catch (err) {
-    console.error("Webhook error:", err);
-    res.status(400).send(`Webhook Error: ${err.message}`);
+    console.error("❌ Error processing webhook:", err);
+    res.status(500).json({ error: "Webhook processing failed" });
   }
 });
 
