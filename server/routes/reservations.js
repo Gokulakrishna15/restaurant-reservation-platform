@@ -6,7 +6,23 @@ import Restaurant from "../models/Restaurant.js";
 
 const router = express.Router();
 
-// ✅ Create reservation (with CAPACITY-BASED availability check)
+// ✅ HELPER: Check if two time slots overlap considering duration
+const doTimeSlotsOverlap = (time1, time2, durationMinutes) => {
+  const [h1, m1] = time1.split(':').map(Number);
+  const [h2, m2] = time2.split(':').map(Number);
+  
+  const minutes1 = h1 * 60 + m1;
+  const minutes2 = h2 * 60 + m2;
+  
+  // Check if time2 falls within time1's duration window
+  const time1End = minutes1 + durationMinutes;
+  const time2End = minutes2 + durationMinutes;
+  
+  // Overlap if: time2 starts before time1 ends AND time1 starts before time2 ends
+  return (minutes2 < time1End && minutes1 < time2End);
+};
+
+// ✅ Create reservation (with CAPACITY-BASED availability check + DURATION OVERLAP)
 router.post("/", verifyToken, async (req, res) => {
   try {
     const { restaurant, date, timeSlot, numberOfGuests, specialRequests } = req.body;
@@ -41,16 +57,22 @@ router.post("/", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Restaurant not found" });
     }
 
-    // ✅ NEW: Check capacity instead of blocking entirely
-    const existingReservations = await Reservation.find({
+    const reservationDuration = restaurantDoc.reservationDuration || 120; // Default 120 minutes
+
+    // ✅ NEW: Check ALL reservations that could overlap with this time slot
+    const allReservationsOnDate = await Reservation.find({
       restaurant,
       date: new Date(date),
-      timeSlot,
       status: { $in: ["pending", "confirmed"] },
     });
 
-    // Calculate total guests already booked
-    const totalBookedGuests = existingReservations.reduce(
+    // ✅ Filter reservations that overlap with requested time slot
+    const overlappingReservations = allReservationsOnDate.filter(res => 
+      doTimeSlotsOverlap(res.timeSlot, timeSlot, reservationDuration)
+    );
+
+    // Calculate total guests in overlapping reservations
+    const totalBookedGuests = overlappingReservations.reduce(
       (sum, res) => sum + res.numberOfGuests,
       0
     );
@@ -60,9 +82,11 @@ router.post("/", verifyToken, async (req, res) => {
 
     if (guests > availableCapacity) {
       return res.status(409).json({ 
-        error: `Not enough capacity. Only ${availableCapacity} seats available for this time slot.`,
+        error: `Not enough capacity. Only ${availableCapacity} seats available for this time slot (including ${reservationDuration}-minute duration).`,
         availableCapacity,
         requestedGuests: guests,
+        overlappingReservations: overlappingReservations.length,
+        reservationDuration,
       });
     }
 
@@ -92,7 +116,7 @@ router.post("/", verifyToken, async (req, res) => {
       availableInfo: {
         totalCapacity: restaurantDoc.totalSeatingCapacity,
         remainingCapacity: availableCapacity - guests,
-        reservationDuration: `${restaurantDoc.reservationDuration} minutes`,
+        reservationDuration: `${reservationDuration} minutes`,
       },
     });
   } catch (err) {
@@ -101,7 +125,7 @@ router.post("/", verifyToken, async (req, res) => {
   }
 });
 
-// ✅ NEW: Get availability for a specific time slot
+// ✅ NEW: Get availability for a specific time slot (UPDATED with duration overlap)
 router.get("/availability/:restaurantId", async (req, res) => {
   try {
     const { restaurantId } = req.params;
@@ -116,14 +140,21 @@ router.get("/availability/:restaurantId", async (req, res) => {
       return res.status(404).json({ error: "Restaurant not found" });
     }
 
-    const existingReservations = await Reservation.find({
+    const reservationDuration = restaurant.reservationDuration || 120;
+
+    // ✅ Get ALL reservations on this date
+    const allReservationsOnDate = await Reservation.find({
       restaurant: restaurantId,
       date: new Date(date),
-      timeSlot,
       status: { $in: ["pending", "confirmed"] },
     });
 
-    const totalBookedGuests = existingReservations.reduce(
+    // ✅ Filter overlapping reservations
+    const overlappingReservations = allReservationsOnDate.filter(res => 
+      doTimeSlotsOverlap(res.timeSlot, timeSlot, reservationDuration)
+    );
+
+    const totalBookedGuests = overlappingReservations.reduce(
       (sum, res) => sum + res.numberOfGuests,
       0
     );
@@ -138,7 +169,8 @@ router.get("/availability/:restaurantId", async (req, res) => {
         availableSeats: availableCapacity,
         totalTables: restaurant.totalTables,
         reservationDuration: restaurant.reservationDuration,
-        activeReservations: existingReservations.length,
+        activeReservations: overlappingReservations.length,
+        overlappingTimeSlots: overlappingReservations.map(r => r.timeSlot),
       },
     });
   } catch (err) {
@@ -197,7 +229,7 @@ router.get("/:id", verifyToken, async (req, res) => {
   }
 });
 
-// ✅ Update reservation (with conflict checking)
+// ✅ Update reservation (with conflict checking + duration overlap)
 router.put("/:id", verifyToken, async (req, res) => {
   try {
     const { date, timeSlot, numberOfGuests, specialRequests } = req.body;
@@ -241,15 +273,20 @@ router.put("/:id", verifyToken, async (req, res) => {
 
       // Check capacity (excluding current reservation)
       const restaurant = await Restaurant.findById(reservation.restaurant);
-      const existingReservations = await Reservation.find({
+      const reservationDuration = restaurant.reservationDuration || 120;
+
+      const allReservationsOnDate = await Reservation.find({
         _id: { $ne: reservationId },
         restaurant: reservation.restaurant,
         date: newDate,
-        timeSlot: newTime,
         status: { $in: ["pending", "confirmed"] },
       });
 
-      const totalBookedGuests = existingReservations.reduce(
+      const overlappingReservations = allReservationsOnDate.filter(res => 
+        doTimeSlotsOverlap(res.timeSlot, newTime, reservationDuration)
+      );
+
+      const totalBookedGuests = overlappingReservations.reduce(
         (sum, res) => sum + res.numberOfGuests,
         0
       );
@@ -301,7 +338,7 @@ router.delete("/:id", verifyToken, async (req, res) => {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
-    // ✅ NEW: Prevent canceling completed reservations
+    // ✅ Prevent canceling completed reservations
     if (reservation.status === "completed") {
       return res.status(400).json({ 
         error: "Cannot cancel completed reservations. Please contact support if needed." 
